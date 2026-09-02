@@ -204,6 +204,7 @@ const mobileMapQuery = window.matchMedia("(max-width: 640px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const HEX_HEIGHT_RATIO = 0.875;
 const MIN_DESKTOP_TILE_HEIGHT = 72;
+const DESKTOP_EDGE_GAP_MULTIPLIER = 3;
 
 let activeSectionId = null;
 let hoveredSectionId = null;
@@ -241,7 +242,8 @@ function syncDesktopTileScale() {
   const viewportHeight = stageRect.height || window.innerHeight;
   const viewportWidth = stageRect.width || window.innerWidth;
   // Extreme desktop branches span 1.5 tile gaps from center plus half a tile.
-  const idealTileHeight = viewportHeight / 4 - gap * 1.25;
+  const idealTileHeight =
+    viewportHeight / 4 - gap * (0.75 + DESKTOP_EDGE_GAP_MULTIPLIER / 2);
   const horizontalReach = 3 * Math.cos(Math.PI / 6);
   const horizontalLimit =
     (viewportWidth / 2 - gap - horizontalReach * gap) /

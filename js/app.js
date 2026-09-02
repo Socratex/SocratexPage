@@ -86,9 +86,11 @@ const iconTemplates = {
 };
 
 const nodeLayer = document.querySelector(".node-layer");
+const mapStage = document.querySelector(".map-stage");
 const selectedSection = document.querySelector("#selected-section");
 const logoTile = document.querySelector(".logo-tile");
 const logo = document.querySelector(".logo-mark");
+const mobileMapQuery = window.matchMedia("(max-width: 640px)");
 
 function getTileMetrics() {
   const rect = logoTile.getBoundingClientRect();
@@ -114,6 +116,41 @@ function pointForSlot(slot) {
   };
 
   return positions[slot] || { x: 0, y: 0 };
+}
+
+function pointForMobileIndex(index) {
+  const rect = logoTile.getBoundingClientRect();
+  const xLimit = (window.innerWidth - rect.width) / 2 - 18;
+  const xOffset = Math.max(0, Math.min(rect.width * 0.55, xLimit));
+  const yStep = rect.height * 0.76;
+  const sequenceLength = sections.length + 1;
+  const middleIndex = (sequenceLength - 1) / 2;
+
+  return {
+    x: index % 2 === 0 ? -xOffset : xOffset,
+    y: (index - middleIndex) * yStep,
+    yStep,
+  };
+}
+
+function setPoint(element, point) {
+  element.style.setProperty("--x", `${point.x}px`);
+  element.style.setProperty("--y", `${point.y}px`);
+}
+
+function syncStageSize() {
+  if (!mobileMapQuery.matches) {
+    mapStage.style.removeProperty("height");
+    mapStage.style.removeProperty("min-height");
+    return;
+  }
+
+  const rect = logoTile.getBoundingClientRect();
+  const { yStep } = pointForMobileIndex(0);
+  const sequenceHeight = rect.height + yStep * sections.length;
+  const stageHeight = Math.max(window.innerHeight, sequenceHeight + 184);
+  mapStage.style.setProperty("height", `${stageHeight}px`);
+  mapStage.style.setProperty("min-height", `${stageHeight}px`);
 }
 
 function createNode(section, index) {
@@ -166,15 +203,27 @@ function handleLogoFallback() {
 }
 
 function syncMap() {
+  syncStageSize();
+
+  if (mobileMapQuery.matches) {
+    setPoint(logoTile, pointForMobileIndex(0));
+
+    document.querySelectorAll(".hex[data-node-id]").forEach((node, index) => {
+      setPoint(node, pointForMobileIndex(index + 1));
+    });
+
+    return;
+  }
+
+  setPoint(logoTile, { x: 0, y: 0 });
+
   document.querySelectorAll(".hex[data-node-id]").forEach((node) => {
     const section = sections.find((item) => item.id === node.dataset.nodeId);
     if (!section) {
       return;
     }
 
-    const point = pointForSlot(section.slot);
-    node.style.setProperty("--x", `${point.x}px`);
-    node.style.setProperty("--y", `${point.y}px`);
+    setPoint(node, pointForSlot(section.slot));
   });
 }
 
@@ -184,3 +233,4 @@ syncMap();
 logo.addEventListener("error", handleLogoFallback);
 window.addEventListener("resize", syncMap);
 window.addEventListener("load", syncMap);
+mobileMapQuery.addEventListener("change", syncMap);

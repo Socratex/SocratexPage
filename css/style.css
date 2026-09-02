@@ -264,7 +264,7 @@ button {
   z-index: 4;
   clip-path: none;
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1);
   animation: center-pulse 3.4s ease-in-out 520ms infinite;
 }
 
@@ -387,6 +387,16 @@ button {
 @media (max-width: 440px) {
   :root {
     --tile-size: clamp(88px, 29vw, 112px);
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow: auto;
+  }
+
+  .map-stage {
+    overflow: hidden;
   }
 }
 

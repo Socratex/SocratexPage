@@ -5,7 +5,20 @@ const mainSections = [
     slot: "upper-left",
     icon: "profile",
     children: [
-      { id: "photo", title: "My Photo", icon: "photo", action: "none" },
+      {
+        id: "photo",
+        title: "My Photo",
+        icon: "photo",
+        action: "panel",
+        tileImage: {
+          src: "assets/profile-trimmed.png",
+          alt: "Socratex profile photo",
+        },
+        media: {
+          src: "assets/profile-trimmed.png",
+          alt: "Socratex profile photo",
+        },
+      },
       { id: "traits", title: "Traits", icon: "spark", action: "panel" },
       { id: "about-philosophy", title: "Philosophy", icon: "mind", action: "panel" },
     ],
@@ -192,12 +205,17 @@ const loremIpsum =
 const nodeLayer = document.querySelector(".node-layer");
 const subnodeLayer = document.querySelector(".subnode-layer");
 const connectorLayer = document.querySelector(".connector-layer");
+const tileLightField = document.querySelector(".tile-light-field");
+const backgroundVideo = document.querySelector(".background-video");
 const mapStage = document.querySelector(".map-stage");
 const logoTile = document.querySelector(".logo-tile");
 const logo = document.querySelector(".logo-mark");
 const overlay = document.querySelector(".content-overlay");
+const contentPanel = document.querySelector(".content-panel");
 const contentTitle = document.querySelector("#content-title");
 const contentLink = document.querySelector("#content-link");
+const contentMedia = document.querySelector("#content-media");
+const contentImage = document.querySelector("#content-image");
 const contentCopy = document.querySelector("#content-copy");
 const closeButton = document.querySelector(".content-close");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
@@ -425,9 +443,14 @@ function syncStageSize() {
 }
 
 function tileMarkup(item) {
+  const visual = item.tileImage
+    ? `<img class="hex-tile-image" src="${item.tileImage.src}" alt="" aria-hidden="true">`
+    : iconTemplates[item.icon];
+  const contentClass = item.tileImage ? "hex-content has-tile-image" : "hex-content";
+
   return `
-    <span class="hex-content">
-      ${iconTemplates[item.icon]}
+    <span class="${contentClass}">
+      ${visual}
       <span class="hex-title">${item.title}</span>
     </span>
   `;
@@ -684,6 +707,47 @@ function syncConnectorState() {
   });
 }
 
+function syncTileLights() {
+  if (!tileLightField) {
+    return;
+  }
+
+  const stageRect = mapStage.getBoundingClientRect();
+  const hiddenMainLayer = mobileMapQuery.matches && Boolean(activeSectionId);
+  const candidates = [
+    logoTile,
+    ...document.querySelectorAll(".mainhex:not(.is-exiting), .subhex:not(.is-exiting)"),
+  ];
+  const gradients = candidates
+    .filter((node) => !(hiddenMainLayer && (node === logoTile || node.classList.contains("mainhex"))))
+    .map((node) => {
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return null;
+      }
+
+      const centerX = rect.left - stageRect.left + rect.width / 2;
+      const centerY = rect.top - stageRect.top + rect.height / 2;
+      const radius = Math.max(rect.width, rect.height) * (node === logoTile ? 1.35 : 1.05);
+      const intensity = node === logoTile ? 0.22 : 0.16;
+
+      return `radial-gradient(circle at ${centerX.toFixed(1)}px ${centerY.toFixed(1)}px, rgba(44, 232, 255, ${intensity}) 0, rgba(44, 232, 255, ${intensity * 0.42}) ${Math.round(radius * 0.46)}px, transparent ${Math.round(radius)}px)`;
+    })
+    .filter(Boolean);
+
+  tileLightField.style.backgroundImage = gradients.join(", ");
+}
+
+function syncBackgroundVideo() {
+  if (!backgroundVideo || reducedMotionQuery.matches) {
+    return;
+  }
+
+  backgroundVideo.play().catch(() => {
+    // Some browsers delay background playback until the page becomes active.
+  });
+}
+
 function renderMainNodes() {
   const fragment = document.createDocumentFragment();
 
@@ -785,8 +849,11 @@ function handleChildAction(child) {
   }
 
   contentTitle.textContent = child.title;
-  contentCopy.textContent = loremIpsum;
+  setPanelMedia(child);
+  contentCopy.hidden = Boolean(child.media);
+  contentCopy.textContent = child.media ? "" : loremIpsum;
   setPanelLink(child);
+  contentPanel.classList.toggle("is-media-panel", Boolean(child.media));
   overlay.hidden = false;
   document.body.classList.add("has-overlay");
   closeButton.focus();
@@ -812,6 +879,19 @@ function setPanelLink(child) {
   contentLink.hidden = false;
   contentLink.href = child.url;
   contentLink.textContent = child.linkLabel || `Open ${child.title}`;
+}
+
+function setPanelMedia(child) {
+  if (!child.media) {
+    contentMedia.hidden = true;
+    contentImage.removeAttribute("src");
+    contentImage.alt = "";
+    return;
+  }
+
+  contentImage.src = child.media.src;
+  contentImage.alt = child.media.alt || child.title;
+  contentMedia.hidden = false;
 }
 
 function leaveMobileSubview() {
@@ -858,6 +938,7 @@ function syncMap() {
       setPoint(item.element, pointForMobileIndex(index, sequence.length));
     });
 
+    syncTileLights();
     return;
   }
 
@@ -878,10 +959,12 @@ function syncMap() {
   });
 
   syncConnectors();
+  syncTileLights();
 }
 
 renderMainNodes();
 syncMap();
+syncBackgroundVideo();
 igniteElement(logoTile.querySelector(".hex-content"), "logo");
 
 logo.addEventListener("error", handleLogoFallback);
@@ -899,6 +982,8 @@ document.addEventListener("keydown", (event) => {
 });
 window.addEventListener("resize", syncMap);
 window.addEventListener("load", syncMap);
+window.addEventListener("load", syncBackgroundVideo);
+document.addEventListener("visibilitychange", syncBackgroundVideo);
 mobileMapQuery.addEventListener("change", syncMap);
 mobileMapQuery.addEventListener("change", () => {
   const activeSection = mainSections.find((item) => item.id === activeSectionId);

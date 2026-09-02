@@ -380,7 +380,7 @@ function renderSubNodes(section) {
       if (token === subnodeRenderToken) {
         renderSubNodesNow(section);
       }
-    }, 190);
+    }, 240);
     return;
   }
 

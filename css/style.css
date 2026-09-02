@@ -396,7 +396,18 @@ button {
   clip-path: none;
   opacity: 1;
   transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1);
-  animation: center-pulse 3.4s ease-in-out 620ms infinite;
+  filter: drop-shadow(0 0 14px rgba(44, 232, 255, 0.22));
+  animation: logo-aura-pulse 6.4s ease-in-out 620ms infinite;
+  transition:
+    filter 180ms ease,
+    transform 180ms ease;
+}
+
+.logo-tile:hover {
+  filter:
+    drop-shadow(0 0 18px rgba(44, 232, 255, 0.52))
+    drop-shadow(0 0 38px rgba(44, 232, 255, 0.28));
+  transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1.035);
 }
 
 .logo-mark {
@@ -404,8 +415,25 @@ button {
   height: 100%;
   object-fit: contain;
   filter:
-    drop-shadow(0 0 20px rgba(44, 232, 255, 0.52))
-    saturate(1.16);
+    brightness(1)
+    drop-shadow(0 0 10px rgba(44, 232, 255, 0.5))
+    drop-shadow(0 0 24px rgba(44, 232, 255, 0.24));
+  animation: logo-idle-flicker 7.8s steps(1, end) 1.4s infinite;
+  transition:
+    filter 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.logo-tile:hover .logo-mark {
+  opacity: 1 !important;
+  filter:
+    brightness(1.2)
+    drop-shadow(0 0 15px rgba(141, 239, 255, 0.78))
+    drop-shadow(0 0 36px rgba(44, 232, 255, 0.52))
+    drop-shadow(0 0 70px rgba(44, 232, 255, 0.24)) !important;
+  transform: scale(1.025);
+  animation-play-state: paused;
 }
 
 .logo-mark.is-missing {
@@ -717,14 +745,62 @@ button {
   }
 }
 
-@keyframes center-pulse {
+@keyframes logo-aura-pulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 13px rgba(44, 232, 255, 0.28));
+    filter: drop-shadow(0 0 14px rgba(44, 232, 255, 0.22));
   }
 
   50% {
-    filter: drop-shadow(0 0 23px rgba(44, 232, 255, 0.48));
+    filter:
+      drop-shadow(0 0 18px rgba(44, 232, 255, 0.31))
+      drop-shadow(0 0 30px rgba(44, 232, 255, 0.12));
+  }
+}
+
+@keyframes logo-idle-flicker {
+  0%,
+  58%,
+  66%,
+  100% {
+    opacity: 1;
+    filter:
+      brightness(1)
+      drop-shadow(0 0 10px rgba(44, 232, 255, 0.5))
+      drop-shadow(0 0 24px rgba(44, 232, 255, 0.24));
+  }
+
+  59%,
+  63% {
+    opacity: 0.78;
+    filter:
+      brightness(0.72)
+      drop-shadow(0 0 5px rgba(44, 232, 255, 0.2));
+  }
+
+  60%,
+  64% {
+    opacity: 1;
+    filter:
+      brightness(1.34)
+      drop-shadow(0 0 16px rgba(141, 239, 255, 0.68))
+      drop-shadow(0 0 42px rgba(44, 232, 255, 0.36));
+  }
+
+  61% {
+    opacity: 0.42;
+    filter:
+      brightness(0.38)
+      drop-shadow(0 0 3px rgba(44, 232, 255, 0.12));
+  }
+
+  62%,
+  65% {
+    opacity: 0.94;
+    filter:
+      brightness(1.08)
+      drop-shadow(0 0 11px rgba(44, 232, 255, 0.48))
+      drop-shadow(0 0 28px rgba(44, 232, 255, 0.22));
   }
 }
 
@@ -792,6 +868,10 @@ button {
   }
 
   .logo-tile {
+    animation: none !important;
+  }
+
+  .logo-mark {
     animation: none !important;
   }
 

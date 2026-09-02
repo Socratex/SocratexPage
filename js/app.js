@@ -202,6 +202,8 @@ const contentCopy = document.querySelector("#content-copy");
 const closeButton = document.querySelector(".content-close");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const HEX_HEIGHT_RATIO = 0.875;
+const MIN_DESKTOP_TILE_HEIGHT = 72;
 
 let activeSectionId = null;
 let hoveredSectionId = null;
@@ -225,6 +227,34 @@ function getTileMetrics() {
     diagonalY: distance / 2,
     distance,
   };
+}
+
+function syncDesktopTileScale() {
+  if (mobileMapQuery.matches) {
+    document.documentElement.style.removeProperty("--tile-size");
+    return;
+  }
+
+  const rootStyle = getComputedStyle(document.documentElement);
+  const gap = Number.parseFloat(rootStyle.getPropertyValue("--tile-gap")) || 10;
+  const stageRect = mapStage.getBoundingClientRect();
+  const viewportHeight = stageRect.height || window.innerHeight;
+  const viewportWidth = stageRect.width || window.innerWidth;
+  // Extreme desktop branches span 1.5 tile gaps from center plus half a tile.
+  const idealTileHeight = viewportHeight / 4 - gap * 1.25;
+  const horizontalReach = 3 * Math.cos(Math.PI / 6);
+  const horizontalLimit =
+    (viewportWidth / 2 - gap - horizontalReach * gap) /
+    (horizontalReach + 1 / (2 * HEX_HEIGHT_RATIO));
+  const tileHeight = Math.max(
+    MIN_DESKTOP_TILE_HEIGHT,
+    Math.min(idealTileHeight, horizontalLimit),
+  );
+
+  document.documentElement.style.setProperty(
+    "--tile-size",
+    `${(tileHeight / HEX_HEIGHT_RATIO).toFixed(2)}px`,
+  );
 }
 
 function pointForSlot(slot) {
@@ -816,6 +846,7 @@ function handleLogoFallback() {
 
 function syncMap() {
   mapStage.classList.toggle("is-mobile-subview", mobileMapQuery.matches && Boolean(activeSectionId));
+  syncDesktopTileScale();
   syncInteractiveVisibility();
   syncStageSize();
 

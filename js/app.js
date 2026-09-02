@@ -2,37 +2,37 @@ const sections = [
   {
     id: "about",
     title: "About Me",
-    angle: -90,
+    slot: "top",
     icon: "profile",
   },
   {
     id: "music",
     title: "Project: Music",
-    angle: -150,
+    slot: "upper-left",
     icon: "music",
   },
   {
     id: "game",
     title: "Project: Game",
-    angle: -30,
+    slot: "upper-right",
     icon: "game",
   },
   {
     id: "ai-pipeline",
     title: "AI Pipeline",
-    angle: 150,
+    slot: "lower-left",
     icon: "nodes",
   },
   {
     id: "work",
     title: "Work",
-    angle: 30,
+    slot: "lower-right",
     icon: "terminal",
   },
   {
     id: "contact",
     title: "Contact",
-    angle: 90,
+    slot: "bottom",
     icon: "contact",
   },
 ];
@@ -86,37 +86,43 @@ const iconTemplates = {
 };
 
 const nodeLayer = document.querySelector(".node-layer");
-const connectorLayer = document.querySelector(".connector-layer");
 const selectedSection = document.querySelector("#selected-section");
-const centerHex = document.querySelector(".hex-center");
+const logoTile = document.querySelector(".logo-tile");
 const logo = document.querySelector(".logo-mark");
 
-function getOrbit() {
+function getTileMetrics() {
+  const rect = logoTile.getBoundingClientRect();
+  const gap = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tile-gap")) || 10;
+  const distance = rect.height + gap;
+
   return {
-    x: Math.min(window.innerWidth * 0.34, 390),
-    y: Math.min(window.innerHeight * 0.29, 252),
+    diagonalX: Math.cos(Math.PI / 6) * distance,
+    diagonalY: distance / 2,
+    distance,
   };
 }
 
-function pointForAngle(angle) {
-  const radians = (angle * Math.PI) / 180;
-  const orbit = getOrbit();
-
-  return {
-    x: Math.cos(radians) * orbit.x,
-    y: Math.sin(radians) * orbit.y,
+function pointForSlot(slot) {
+  const { diagonalX, diagonalY, distance } = getTileMetrics();
+  const positions = {
+    top: { x: 0, y: -distance },
+    "upper-right": { x: diagonalX, y: -diagonalY },
+    "lower-right": { x: diagonalX, y: diagonalY },
+    bottom: { x: 0, y: distance },
+    "lower-left": { x: -diagonalX, y: diagonalY },
+    "upper-left": { x: -diagonalX, y: -diagonalY },
   };
+
+  return positions[slot] || { x: 0, y: 0 };
 }
 
 function createNode(section, index) {
-  const point = pointForAngle(section.angle);
   const button = document.createElement("button");
 
   button.className = "hex";
   button.type = "button";
   button.dataset.nodeId = section.id;
-  button.style.setProperty("--x", `${point.x}px`);
-  button.style.setProperty("--y", `${point.y}px`);
+  button.dataset.slot = section.slot;
   button.style.animationDelay = `${120 + index * 55}ms`;
   button.setAttribute("aria-label", `Open ${section.title}`);
 
@@ -128,10 +134,6 @@ function createNode(section, index) {
   `;
 
   button.addEventListener("click", () => selectNode(section.id));
-  button.addEventListener("mouseenter", () => setConnectorState(section.id, true));
-  button.addEventListener("mouseleave", () => setConnectorState(section.id, false));
-  button.addEventListener("focus", () => setConnectorState(section.id, true));
-  button.addEventListener("blur", () => setConnectorState(section.id, false));
 
   return button;
 }
@@ -144,72 +146,6 @@ function renderNodes() {
   });
 
   nodeLayer.replaceChildren(fragment);
-}
-
-function centerOf(element) {
-  const rect = element.getBoundingClientRect();
-  return {
-    x: rect.left + rect.width / 2,
-    y: rect.top + rect.height / 2,
-    radius: Math.min(rect.width, rect.height) * 0.43,
-  };
-}
-
-function shortenedLine(from, to) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const ux = dx / length;
-  const uy = dy / length;
-
-  return {
-    x1: from.x + ux * from.radius,
-    y1: from.y + uy * from.radius,
-    x2: to.x - ux * to.radius,
-    y2: to.y - uy * to.radius,
-  };
-}
-
-function createSvgLine(kind, id, line) {
-  const element = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  element.dataset.nodeId = id;
-  element.classList.add(kind);
-  element.setAttribute("x1", line.x1);
-  element.setAttribute("y1", line.y1);
-  element.setAttribute("x2", line.x2);
-  element.setAttribute("y2", line.y2);
-  return element;
-}
-
-function renderConnectors() {
-  if (window.matchMedia("(max-width: 920px), (max-height: 650px)").matches) {
-    connectorLayer.replaceChildren();
-    return;
-  }
-
-  const center = centerOf(centerHex);
-  const fragment = document.createDocumentFragment();
-
-  sections.forEach((section) => {
-    const node = document.querySelector(`[data-node-id="${section.id}"]`);
-    if (!node) {
-      return;
-    }
-
-    const line = shortenedLine(center, centerOf(node));
-    fragment.append(createSvgLine("connector", section.id, line));
-    fragment.append(createSvgLine("connector-trace", section.id, line));
-  });
-
-  connectorLayer.replaceChildren(fragment);
-}
-
-function setConnectorState(id, isActive) {
-  document.querySelectorAll(`[data-node-id="${id}"]`).forEach((element) => {
-    if (element.classList.contains("connector") || element.classList.contains("connector-trace")) {
-      element.classList.toggle("is-active", isActive);
-    }
-  });
 }
 
 function selectNode(id) {
@@ -236,17 +172,15 @@ function syncMap() {
       return;
     }
 
-    const point = pointForAngle(section.angle);
+    const point = pointForSlot(section.slot);
     node.style.setProperty("--x", `${point.x}px`);
     node.style.setProperty("--y", `${point.y}px`);
   });
-
-  window.requestAnimationFrame(renderConnectors);
 }
 
 renderNodes();
-renderConnectors();
+syncMap();
 
 logo.addEventListener("error", handleLogoFallback);
 window.addEventListener("resize", syncMap);
-window.addEventListener("load", renderConnectors);
+window.addEventListener("load", syncMap);

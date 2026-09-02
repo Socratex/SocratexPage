@@ -5,8 +5,8 @@ Static starter version of the Socratex personal portfolio map.
 ## Structure
 
 - `index.html` - semantic HTML shell.
-- `css/style.css` - visual system, radial layout, responsive states, animations.
-- `js/app.js` - section data, generated hexagon nodes, compact map positioning, interaction.
+- `css/style.css` - visual system, hex tile layout, responsive states, flicker animations.
+- `js/app.js` - section data, generated main tiles, hover expansions, mobile flow, content overlay.
 - `assets/logo.png` - Socratex logo used as the central tile.
 
 ## Local preview

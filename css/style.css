@@ -571,15 +571,6 @@ button {
   box-shadow: 0 0 14px rgba(44, 232, 255, 0.18);
 }
 
-.panel-kicker {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--muted);
-  font-size: 0.66rem;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
 @keyframes node-fade-out {
   from {
     opacity: 1;

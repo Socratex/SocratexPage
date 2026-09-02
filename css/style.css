@@ -117,6 +117,10 @@ button {
   transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1);
   opacity: 0;
   z-index: 3;
+  transition:
+    opacity 180ms ease,
+    filter 180ms ease,
+    transform 180ms ease;
 }
 
 .hex {
@@ -126,9 +130,6 @@ button {
   cursor: pointer;
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   pointer-events: auto;
-  transition:
-    transform 180ms ease,
-    filter 180ms ease;
 }
 
 .hex::before,
@@ -174,6 +175,8 @@ button {
   width: 100%;
   height: 100%;
   gap: 0;
+  opacity: 0;
+  animation: logo-boot 520ms steps(2, end) forwards;
 }
 
 .hex-icon {
@@ -279,11 +282,9 @@ button {
 .logo-tile {
   z-index: 4;
   clip-path: none;
-  opacity: 0;
+  opacity: 1;
   transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1);
-  animation:
-    logo-boot 520ms steps(2, end) forwards,
-    center-pulse 3.4s ease-in-out 620ms infinite;
+  animation: center-pulse 3.4s ease-in-out 620ms infinite;
 }
 
 .logo-mark {
@@ -333,6 +334,27 @@ button {
 .subhex {
   z-index: 2;
   animation: subnode-flicker 320ms steps(2, end) forwards;
+}
+
+.backhex::before {
+  background:
+    linear-gradient(120deg, transparent 0 10%, var(--cyan-soft) 11% 15%, transparent 16% 72%, var(--cyan) 73% 77%, transparent 78%),
+    linear-gradient(180deg, rgba(141, 239, 255, 0.88), rgba(42, 141, 255, 0.62));
+}
+
+.hex.is-exiting {
+  opacity: 0 !important;
+  pointer-events: none;
+  animation: none !important;
+  filter: brightness(0.35);
+}
+
+.map-stage.is-mobile-subview .logo-tile,
+.map-stage.is-mobile-subview .mainhex {
+  opacity: 0 !important;
+  pointer-events: none;
+  animation: none !important;
+  filter: brightness(0.35);
 }
 
 .content-overlay {
@@ -407,12 +429,6 @@ button {
   font-size: 0.66rem;
   letter-spacing: 0;
   text-transform: uppercase;
-}
-
-.section-panel strong {
-  display: block;
-  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
-  letter-spacing: 0;
 }
 
 @keyframes tile-boot {
@@ -578,6 +594,10 @@ button {
 
   .map-stage {
     overflow: hidden;
+  }
+
+  .map-stage.is-mobile-subview .subnode-layer {
+    z-index: 5;
   }
 }
 

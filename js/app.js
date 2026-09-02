@@ -146,6 +146,12 @@ const iconTemplates = {
       <text x="32" y="42" text-anchor="middle">in</text>
     </svg>
   `,
+  back: `
+    <svg class="hex-icon" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M38 16L22 32l16 16"></path>
+      <path d="M24 32h28"></path>
+    </svg>
+  `,
 };
 
 const loremIpsum =
@@ -163,6 +169,14 @@ const closeButton = document.querySelector(".content-close");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
 
 let activeSectionId = null;
+let subnodeRenderToken = 0;
+
+const backNode = {
+  id: "back",
+  title: "Back",
+  icon: "back",
+  action: "back",
+};
 
 function getTileMetrics() {
   const rect = logoTile.getBoundingClientRect();
@@ -227,7 +241,19 @@ function pointForChild(slot, index) {
 
 function mobileSequence() {
   const activeSection = mainSections.find((section) => section.id === activeSectionId);
-  const sequence = [{ type: "logo", id: "logo", element: logoTile }];
+  const sequence = [];
+
+  if (activeSection) {
+    return [backNode, ...activeSection.children]
+      .map((item) => ({
+        type: item.id === "back" ? "back" : "child",
+        id: item.id,
+        element: document.querySelector(`.subhex[data-node-id="${item.id}"]`),
+      }))
+      .filter((item) => item.element);
+  }
+
+  sequence.push({ type: "logo", id: "logo", element: logoTile });
 
   mainSections.forEach((section) => {
     sequence.push({
@@ -315,13 +341,16 @@ function createMainNode(section, index) {
 function createSubNode(section, child, index) {
   const button = document.createElement("button");
 
-  button.className = "hex subhex";
+  button.className = child.action === "back" ? "hex subhex backhex" : "hex subhex";
   button.type = "button";
   button.dataset.nodeId = child.id;
   button.dataset.parentId = section.id;
   button.dataset.action = child.action;
   button.style.animationDelay = `${index * 34}ms`;
-  button.setAttribute("aria-label", `Open ${child.title}`);
+  button.setAttribute(
+    "aria-label",
+    child.action === "back" ? "Back to main portfolio map" : `Open ${child.title}`,
+  );
   button.innerHTML = tileMarkup(child);
   button.addEventListener("click", () => handleChildAction(child));
 
@@ -339,17 +368,41 @@ function renderMainNodes() {
 }
 
 function renderSubNodes(section) {
+  const oldNodes = [...subnodeLayer.querySelectorAll(".subhex")];
+  const token = (subnodeRenderToken += 1);
+
+  if (oldNodes.length > 0) {
+    oldNodes.forEach((node) => {
+      node.classList.add("is-exiting");
+    });
+
+    window.setTimeout(() => {
+      if (token === subnodeRenderToken) {
+        renderSubNodesNow(section);
+      }
+    }, 190);
+    return;
+  }
+
+  renderSubNodesNow(section);
+}
+
+function renderSubNodesNow(section) {
   if (!section) {
     subnodeLayer.replaceChildren();
+    window.requestAnimationFrame(syncMap);
     return;
   }
 
   const fragment = document.createDocumentFragment();
-  section.children.forEach((child, index) => {
+  const visibleChildren = mobileMapQuery.matches ? [backNode, ...section.children] : section.children;
+
+  visibleChildren.forEach((child, index) => {
     fragment.append(createSubNode(section, child, index));
   });
 
   subnodeLayer.replaceChildren(fragment);
+  window.requestAnimationFrame(syncMap);
 }
 
 function activateSection(id) {
@@ -359,6 +412,7 @@ function activateSection(id) {
 
   activeSectionId = id;
   const section = mainSections.find((item) => item.id === id);
+  mapStage.classList.toggle("is-mobile-subview", mobileMapQuery.matches);
   renderSubNodes(section);
 
   document.querySelectorAll(".mainhex").forEach((node) => {
@@ -369,6 +423,11 @@ function activateSection(id) {
 }
 
 function handleChildAction(child) {
+  if (child.action === "back") {
+    leaveMobileSubview();
+    return;
+  }
+
   if (child.url) {
     window.location.href = child.url;
     return;
@@ -385,9 +444,32 @@ function handleChildAction(child) {
   closeButton.focus();
 }
 
+function leaveMobileSubview() {
+  if (!mobileMapQuery.matches) {
+    return;
+  }
+
+  activeSectionId = null;
+  mapStage.classList.remove("is-mobile-subview");
+  document.querySelectorAll(".mainhex").forEach((node) => {
+    node.classList.remove("is-selected");
+  });
+  renderSubNodes(null);
+  syncMap();
+}
+
 function closeOverlay() {
   overlay.hidden = true;
   document.body.classList.remove("has-overlay");
+}
+
+function syncInteractiveVisibility() {
+  const subviewActive = mobileMapQuery.matches && Boolean(activeSectionId);
+
+  nodeLayer.toggleAttribute("inert", subviewActive);
+  nodeLayer.setAttribute("aria-hidden", String(subviewActive));
+  logoTile.toggleAttribute("inert", subviewActive);
+  logoTile.setAttribute("aria-hidden", String(subviewActive));
 }
 
 function handleLogoFallback() {
@@ -395,6 +477,8 @@ function handleLogoFallback() {
 }
 
 function syncMap() {
+  mapStage.classList.toggle("is-mobile-subview", mobileMapQuery.matches && Boolean(activeSectionId));
+  syncInteractiveVisibility();
   syncStageSize();
 
   if (mobileMapQuery.matches) {
@@ -441,3 +525,7 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("resize", syncMap);
 window.addEventListener("load", syncMap);
 mobileMapQuery.addEventListener("change", syncMap);
+mobileMapQuery.addEventListener("change", () => {
+  const activeSection = mainSections.find((item) => item.id === activeSectionId);
+  renderSubNodes(activeSection || null);
+});

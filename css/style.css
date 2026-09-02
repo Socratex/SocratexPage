@@ -182,6 +182,47 @@ button {
   cursor: default;
 }
 
+.hex.is-image-tile {
+  overflow: hidden;
+}
+
+.hex.is-image-tile::before,
+.hex.is-image-tile::after {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.hex.is-image-tile::before {
+  background:
+    linear-gradient(120deg, transparent 0 10%, var(--cyan-soft) 11% 15%, transparent 16% 72%, var(--cyan) 73% 77%, transparent 78%),
+    linear-gradient(180deg, rgba(44, 232, 255, 0.96), rgba(42, 141, 255, 0.5));
+  box-shadow:
+    0 15px 30px rgba(0, 0, 0, 0.42),
+    0 0 18px rgba(44, 232, 255, 0.42),
+    inset 0 0 16px rgba(44, 232, 255, 0.22);
+  opacity: 0.92;
+  padding: 2px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.hex.is-image-tile::after {
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 32%),
+    radial-gradient(circle at 50% 42%, rgba(44, 232, 255, 0.1), transparent 64%),
+    linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 7, 13, 0.18));
+  box-shadow:
+    inset 0 0 24px rgba(44, 232, 255, 0.1),
+    inset 0 -18px 28px rgba(0, 0, 0, 0.26);
+}
+
 .hex::before,
 .hex::after {
   content: "";
@@ -243,6 +284,16 @@ button {
   gap: 5px;
 }
 
+.hex-content.is-image-only {
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+  overflow: hidden;
+  clip-path: inherit;
+  transform: none;
+}
+
 .logo-tile .hex-content {
   width: 100%;
   height: 100%;
@@ -264,6 +315,22 @@ button {
   transition:
     filter 160ms ease,
     transform 160ms ease;
+}
+
+.hex-content.is-image-only .hex-tile-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+  object-position: center 24%;
+  clip-path: inherit;
+  border: 0;
+  filter:
+    brightness(0.86)
+    saturate(0.92)
+    contrast(1.08);
 }
 
 .hex-icon {
@@ -358,6 +425,20 @@ button {
     linear-gradient(135deg, rgba(5, 31, 48, 0.98), rgba(1, 10, 17, 0.95));
 }
 
+.hex.is-image-tile:hover::after,
+.hex.is-image-tile:focus-visible::after,
+.hex.is-image-tile.is-hovered::after,
+.hex.is-image-tile.is-selected::after {
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 32%),
+    radial-gradient(circle at 50% 42%, rgba(44, 232, 255, 0.16), transparent 64%),
+    linear-gradient(135deg, rgba(0, 0, 0, 0.02), rgba(0, 7, 13, 0.12));
+  box-shadow:
+    inset 0 0 28px rgba(44, 232, 255, 0.14),
+    inset 0 -18px 28px rgba(0, 0, 0, 0.2);
+}
+
 .hex:hover .hex-icon,
 .hex:focus-visible .hex-icon,
 .hex.is-hovered .hex-icon,
@@ -376,6 +457,17 @@ button {
     contrast(1.12)
     drop-shadow(0 0 14px rgba(141, 239, 255, 0.66));
   transform: scale(1.04);
+}
+
+.hex.is-image-tile:hover .hex-tile-image,
+.hex.is-image-tile:focus-visible .hex-tile-image,
+.hex.is-image-tile.is-hovered .hex-tile-image,
+.hex.is-image-tile.is-selected .hex-tile-image {
+  filter:
+    brightness(0.98)
+    saturate(1)
+    contrast(1.12);
+  transform: scale(1.035);
 }
 
 .hex:hover .hex-title::after,

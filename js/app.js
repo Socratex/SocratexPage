@@ -9,14 +9,11 @@ const mainSections = [
         id: "photo",
         title: "My Photo",
         icon: "photo",
-        action: "panel",
+        action: "none",
         tileImage: {
           src: "assets/profile-trimmed.png",
           alt: "Socratex profile photo",
-        },
-        media: {
-          src: "assets/profile-trimmed.png",
-          alt: "Socratex profile photo",
+          fill: true,
         },
       },
       { id: "traits", title: "Traits", icon: "spark", action: "panel" },
@@ -446,12 +443,19 @@ function tileMarkup(item) {
   const visual = item.tileImage
     ? `<img class="hex-tile-image" src="${item.tileImage.src}" alt="" aria-hidden="true">`
     : iconTemplates[item.icon];
-  const contentClass = item.tileImage ? "hex-content has-tile-image" : "hex-content";
+  const contentClasses = ["hex-content"];
+  if (item.tileImage) {
+    contentClasses.push("has-tile-image");
+  }
+  if (item.tileImage?.fill) {
+    contentClasses.push("is-image-only");
+  }
+  const title = item.tileImage?.fill ? "" : `<span class="hex-title">${item.title}</span>`;
 
   return `
-    <span class="${contentClass}">
+    <span class="${contentClasses.join(" ")}">
       ${visual}
-      <span class="hex-title">${item.title}</span>
+      ${title}
     </span>
   `;
 }
@@ -624,14 +628,18 @@ function createMainNode(section, index) {
 
 function createSubNode(section, child, index) {
   const isDirectLink = child.action === "url" && child.url;
-  const button = document.createElement(isDirectLink ? "a" : "button");
+  const elementName = isDirectLink ? "a" : child.action === "none" ? "div" : "button";
+  const button = document.createElement(elementName);
 
   button.className = child.action === "back" ? "hex subhex backhex" : "hex subhex";
+  button.classList.toggle("is-image-tile", Boolean(child.tileImage?.fill));
   if (button.tagName === "BUTTON") {
     button.type = "button";
   } else {
-    button.href = child.url;
-    if (!child.url.startsWith("mailto:")) {
+    if (isDirectLink) {
+      button.href = child.url;
+    }
+    if (isDirectLink && !child.url.startsWith("mailto:")) {
       button.target = "_blank";
       button.rel = "noopener noreferrer";
     }
@@ -641,10 +649,14 @@ function createSubNode(section, child, index) {
   button.dataset.action = child.action;
   button.setAttribute(
     "aria-label",
-    child.action === "back" ? "Back to main portfolio map" : `Open ${child.title}`,
+    child.action === "back"
+      ? "Back to main portfolio map"
+      : child.action === "none"
+        ? child.title
+        : `Open ${child.title}`,
   );
   button.innerHTML = tileMarkup(child);
-  if (!isDirectLink) {
+  if (!isDirectLink && child.action !== "none") {
     button.addEventListener("click", () => handleChildAction(child));
   }
   wireTileTilt(button);

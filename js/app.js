@@ -200,9 +200,11 @@ const contentLink = document.querySelector("#content-link");
 const contentCopy = document.querySelector("#content-copy");
 const closeButton = document.querySelector(".content-close");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 let activeSectionId = null;
 let subnodeRenderToken = 0;
+const ignitionTimers = new WeakMap();
 
 const backNode = {
   id: "back",
@@ -353,6 +355,146 @@ function tileMarkup(item) {
   `;
 }
 
+const ignitionProfiles = {
+  main: {
+    total: 760,
+    settleRange: [130, 170],
+    onRange: [58, 110],
+    offRange: [54, 128],
+    microChance: 0.16,
+  },
+  sub: {
+    total: 620,
+    settleRange: [110, 150],
+    onRange: [56, 96],
+    offRange: [52, 112],
+    microChance: 0.14,
+  },
+  logo: {
+    total: 780,
+    settleRange: [150, 190],
+    onRange: [60, 112],
+    offRange: [56, 130],
+    microChance: 0.12,
+  },
+};
+
+const ignitionStates = {
+  off: { opacity: "0", filter: "brightness(0.12) saturate(0.55)" },
+  low: { opacity: "0.16", filter: "brightness(0.28) saturate(0.7)" },
+  weak: { opacity: "0.72", filter: "brightness(0.86) saturate(0.95)" },
+  on: { opacity: "1", filter: "brightness(1.22) saturate(1.1)" },
+  flash: { opacity: "1", filter: "brightness(1.62) saturate(1.28)" },
+  stable: { opacity: "1", filter: "brightness(1) saturate(1)" },
+};
+
+function randomBetween(min, max) {
+  return Math.round(min + Math.random() * (max - min));
+}
+
+function randomFrom(states) {
+  return states[Math.floor(Math.random() * states.length)];
+}
+
+function buildIgnitionSequence(profile) {
+  const sequence = [];
+  const settleDuration = randomBetween(...profile.settleRange);
+  let remaining = profile.total - settleDuration;
+  let useOnState = false;
+  let microUsed = false;
+
+  while (remaining >= 108) {
+    const durationRange = useOnState ? profile.onRange : profile.offRange;
+    const duration = Math.min(randomBetween(...durationRange), remaining);
+    const state = useOnState ? randomFrom(["on", "flash", "weak"]) : randomFrom(["off", "low"]);
+
+    sequence.push({ duration, state });
+    remaining -= duration;
+
+    if (!microUsed && remaining >= 132 && Math.random() < profile.microChance) {
+      sequence.push({
+        duration: randomBetween(22, 30),
+        state: useOnState ? "low" : "flash",
+      });
+      remaining -= sequence[sequence.length - 1].duration;
+      microUsed = true;
+    }
+
+    useOnState = !useOnState;
+  }
+
+  if (remaining > 0 && sequence.length > 0) {
+    sequence[sequence.length - 1].duration += remaining;
+  }
+
+  sequence.push({ duration: settleDuration, state: "stable" });
+  return sequence;
+}
+
+function applyIgnitionState(element, stateName) {
+  const state = ignitionStates[stateName] || ignitionStates.stable;
+
+  element.style.opacity = state.opacity;
+  element.style.filter = state.filter;
+}
+
+function clearIgnition(element) {
+  const timers = ignitionTimers.get(element) || [];
+
+  timers.forEach((timer) => window.clearTimeout(timer));
+  ignitionTimers.delete(element);
+  element.classList.remove("is-igniting");
+}
+
+function finishIgnition(element) {
+  element.classList.remove("is-igniting");
+  element.classList.add("is-lit");
+  element.style.removeProperty("opacity");
+  element.style.removeProperty("filter");
+}
+
+function igniteElement(element, profileName, delay = 0) {
+  if (!element) {
+    return;
+  }
+
+  clearIgnition(element);
+  element.classList.remove("is-lit");
+
+  if (reducedMotionQuery.matches) {
+    finishIgnition(element);
+    return;
+  }
+
+  const profile = ignitionProfiles[profileName] || ignitionProfiles.main;
+  const sequence = buildIgnitionSequence(profile);
+  const timers = [];
+  let elapsed = delay;
+
+  element.classList.add("is-igniting");
+  applyIgnitionState(element, "off");
+
+  sequence.forEach((part) => {
+    timers.push(window.setTimeout(() => applyIgnitionState(element, part.state), elapsed));
+    elapsed += part.duration;
+  });
+
+  timers.push(window.setTimeout(() => finishIgnition(element), delay + profile.total));
+  ignitionTimers.set(element, timers);
+}
+
+function igniteMainNodes() {
+  document.querySelectorAll(".mainhex").forEach((node, index) => {
+    igniteElement(node, "main", 120 + index * 45);
+  });
+}
+
+function igniteSubNodes() {
+  document.querySelectorAll(".subhex").forEach((node, index) => {
+    igniteElement(node, "sub", index * 34);
+  });
+}
+
 function createMainNode(section, index) {
   const button = document.createElement("button");
 
@@ -360,7 +502,6 @@ function createMainNode(section, index) {
   button.type = "button";
   button.dataset.nodeId = section.id;
   button.dataset.slot = section.slot;
-  button.style.animationDelay = `${120 + index * 45}ms`;
   button.setAttribute("aria-label", `Open ${section.title} branch`);
   button.innerHTML = tileMarkup(section);
 
@@ -388,7 +529,6 @@ function createSubNode(section, child, index) {
   button.dataset.nodeId = child.id;
   button.dataset.parentId = section.id;
   button.dataset.action = child.action;
-  button.style.animationDelay = `${index * 34}ms`;
   button.setAttribute(
     "aria-label",
     child.action === "back" ? "Back to main portfolio map" : `Open ${child.title}`,
@@ -409,6 +549,7 @@ function renderMainNodes() {
   });
 
   nodeLayer.replaceChildren(fragment);
+  window.requestAnimationFrame(igniteMainNodes);
 }
 
 function renderSubNodes(section) {
@@ -417,6 +558,7 @@ function renderSubNodes(section) {
 
   if (oldNodes.length > 0) {
     oldNodes.forEach((node) => {
+      clearIgnition(node);
       node.classList.add("is-exiting");
     });
 
@@ -446,7 +588,10 @@ function renderSubNodesNow(section) {
   });
 
   subnodeLayer.replaceChildren(fragment);
-  window.requestAnimationFrame(syncMap);
+  window.requestAnimationFrame(() => {
+    syncMap();
+    igniteSubNodes();
+  });
 }
 
 function activateSection(id) {
@@ -576,6 +721,7 @@ function syncMap() {
 
 renderMainNodes();
 syncMap();
+igniteElement(logoTile.querySelector(".hex-content"), "logo");
 
 logo.addEventListener("error", handleLogoFallback);
 closeButton.addEventListener("click", closeOverlay);

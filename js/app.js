@@ -16,9 +16,23 @@ const mainSections = [
     slot: "upper-right",
     icon: "nodes",
     children: [
-      { id: "music", title: "Music", icon: "music", action: "panel" },
-      { id: "game", title: "Game", icon: "game", action: "panel" },
-      { id: "ai-pipeline", title: "AI Pipeline", icon: "nodes", action: "panel" },
+      { id: "music", title: "Music", icon: "music", action: "url", url: "https://soundcloud.com/rexcoast" },
+      {
+        id: "game",
+        title: "Game",
+        icon: "game",
+        action: "panel",
+        url: "https://sites.google.com/view/riftbound",
+        linkLabel: "Open Riftbound",
+      },
+      {
+        id: "ai-pipeline",
+        title: "AI Pipeline",
+        icon: "nodes",
+        action: "panel",
+        url: "https://github.com/Socratex/SocratexAI",
+        linkLabel: "Open SocratexAI",
+      },
     ],
   },
   {
@@ -39,10 +53,28 @@ const mainSections = [
     slot: "lower-right",
     icon: "contact",
     children: [
-      { id: "facebook", title: "Facebook", icon: "facebook", action: "none" },
-      { id: "discord", title: "Discord", icon: "discord", action: "none" },
-      { id: "email", title: "Email", icon: "email", action: "none" },
-      { id: "linkedin", title: "LinkedIn", icon: "linkedin", action: "none" },
+      { id: "facebook", title: "Facebook", icon: "facebook", action: "url", url: "https://www.facebook.com/socratex" },
+      {
+        id: "discord",
+        title: "Discord",
+        icon: "discord",
+        action: "url",
+        url: "https://discord.com/users/248187684541956096",
+      },
+      {
+        id: "email",
+        title: "Email",
+        icon: "email",
+        action: "url",
+        url: "mailto:michal.jasinski.programmer@gmail.com",
+      },
+      {
+        id: "linkedin",
+        title: "LinkedIn",
+        icon: "linkedin",
+        action: "url",
+        url: "https://www.linkedin.com/in/michaljasinskiprogrammer/",
+      },
     ],
   },
 ];
@@ -164,6 +196,7 @@ const logoTile = document.querySelector(".logo-tile");
 const logo = document.querySelector(".logo-mark");
 const overlay = document.querySelector(".content-overlay");
 const contentTitle = document.querySelector("#content-title");
+const contentLink = document.querySelector("#content-link");
 const contentCopy = document.querySelector("#content-copy");
 const closeButton = document.querySelector(".content-close");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
@@ -339,10 +372,19 @@ function createMainNode(section, index) {
 }
 
 function createSubNode(section, child, index) {
-  const button = document.createElement("button");
+  const isDirectLink = child.action === "url" && child.url;
+  const button = document.createElement(isDirectLink ? "a" : "button");
 
   button.className = child.action === "back" ? "hex subhex backhex" : "hex subhex";
-  button.type = "button";
+  if (button.tagName === "BUTTON") {
+    button.type = "button";
+  } else {
+    button.href = child.url;
+    if (!child.url.startsWith("mailto:")) {
+      button.target = "_blank";
+      button.rel = "noopener noreferrer";
+    }
+  }
   button.dataset.nodeId = child.id;
   button.dataset.parentId = section.id;
   button.dataset.action = child.action;
@@ -352,7 +394,9 @@ function createSubNode(section, child, index) {
     child.action === "back" ? "Back to main portfolio map" : `Open ${child.title}`,
   );
   button.innerHTML = tileMarkup(child);
-  button.addEventListener("click", () => handleChildAction(child));
+  if (!isDirectLink) {
+    button.addEventListener("click", () => handleChildAction(child));
+  }
 
   return button;
 }
@@ -428,8 +472,8 @@ function handleChildAction(child) {
     return;
   }
 
-  if (child.url) {
-    window.location.href = child.url;
+  if (child.action === "url" && child.url) {
+    openDirectLink(child.url);
     return;
   }
 
@@ -439,9 +483,32 @@ function handleChildAction(child) {
 
   contentTitle.textContent = child.title;
   contentCopy.textContent = loremIpsum;
+  setPanelLink(child);
   overlay.hidden = false;
   document.body.classList.add("has-overlay");
   closeButton.focus();
+}
+
+function openDirectLink(url) {
+  if (url.startsWith("mailto:")) {
+    window.location.href = url;
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function setPanelLink(child) {
+  if (!child.url) {
+    contentLink.hidden = true;
+    contentLink.removeAttribute("href");
+    contentLink.textContent = "Open link";
+    return;
+  }
+
+  contentLink.hidden = false;
+  contentLink.href = child.url;
+  contentLink.textContent = child.linkLabel || `Open ${child.title}`;
 }
 
 function leaveMobileSubview() {

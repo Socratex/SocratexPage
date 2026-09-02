@@ -191,6 +191,7 @@ const loremIpsum =
 
 const nodeLayer = document.querySelector(".node-layer");
 const subnodeLayer = document.querySelector(".subnode-layer");
+const connectorLayer = document.querySelector(".connector-layer");
 const mapStage = document.querySelector(".map-stage");
 const logoTile = document.querySelector(".logo-tile");
 const logo = document.querySelector(".logo-mark");
@@ -203,6 +204,7 @@ const mobileMapQuery = window.matchMedia("(max-width: 640px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 let activeSectionId = null;
+let hoveredSectionId = null;
 let subnodeRenderToken = 0;
 const ignitionTimers = new WeakMap();
 
@@ -328,6 +330,50 @@ function pointForMobileIndex(index, total) {
 function setPoint(element, point) {
   element.style.setProperty("--x", `${point.x}px`);
   element.style.setProperty("--y", `${point.y}px`);
+}
+
+function setHoveredSection(id) {
+  hoveredSectionId = id;
+  mapStage.classList.toggle("is-main-hovering", Boolean(id));
+
+  document.querySelectorAll(".mainhex").forEach((node) => {
+    node.classList.toggle("is-hovered", node.dataset.nodeId === id);
+  });
+
+  syncConnectorState();
+}
+
+function clearHoveredSection(id) {
+  if (hoveredSectionId !== id) {
+    return;
+  }
+
+  setHoveredSection(null);
+}
+
+function resetTileTilt(tile) {
+  tile.style.setProperty("--tilt-x", "0deg");
+  tile.style.setProperty("--tilt-y", "0deg");
+}
+
+function handleTilePointerMove(event) {
+  if (reducedMotionQuery.matches) {
+    return;
+  }
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / rect.width - 0.5;
+  const y = (event.clientY - rect.top) / rect.height - 0.5;
+  const maxTilt = 3.2;
+
+  event.currentTarget.style.setProperty("--tilt-x", `${(-y * maxTilt).toFixed(2)}deg`);
+  event.currentTarget.style.setProperty("--tilt-y", `${(x * maxTilt).toFixed(2)}deg`);
+}
+
+function wireTileTilt(tile) {
+  tile.addEventListener("pointermove", handleTilePointerMove);
+  tile.addEventListener("pointerleave", () => resetTileTilt(tile));
+  tile.addEventListener("blur", () => resetTileTilt(tile));
 }
 
 function syncStageSize() {
@@ -505,9 +551,18 @@ function createMainNode(section, index) {
   button.setAttribute("aria-label", `Open ${section.title} branch`);
   button.innerHTML = tileMarkup(section);
 
-  button.addEventListener("mouseenter", () => activateSection(section.id));
-  button.addEventListener("focus", () => activateSection(section.id));
+  button.addEventListener("mouseenter", () => {
+    setHoveredSection(section.id);
+    activateSection(section.id);
+  });
+  button.addEventListener("mouseleave", () => clearHoveredSection(section.id));
+  button.addEventListener("focus", () => {
+    setHoveredSection(section.id);
+    activateSection(section.id);
+  });
+  button.addEventListener("blur", () => clearHoveredSection(section.id));
   button.addEventListener("click", () => activateSection(section.id));
+  wireTileTilt(button);
 
   return button;
 }
@@ -537,8 +592,64 @@ function createSubNode(section, child, index) {
   if (!isDirectLink) {
     button.addEventListener("click", () => handleChildAction(child));
   }
+  wireTileTilt(button);
 
   return button;
+}
+
+function syncConnectors() {
+  if (!connectorLayer || mobileMapQuery.matches) {
+    connectorLayer?.replaceChildren();
+    return;
+  }
+
+  const stageRect = mapStage.getBoundingClientRect();
+  const logoRect = logoTile.getBoundingClientRect();
+  const mainRect = nodeLayer.querySelector(".mainhex")?.getBoundingClientRect();
+  const center = { x: stageRect.width / 2, y: stageRect.height / 2 };
+  const startOffset = Math.min(logoRect.width, logoRect.height) * 0.44;
+  const endOffset = Math.min(mainRect?.width || logoRect.width, mainRect?.height || logoRect.height) * 0.5;
+  const fragment = document.createDocumentFragment();
+
+  mainSections.forEach((section) => {
+    const endPoint = pointForSlot(section.slot);
+    const length = Math.hypot(endPoint.x, endPoint.y) || 1;
+    const unit = { x: endPoint.x / length, y: endPoint.y / length };
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const base = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const pulse = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+    group.classList.add("connector");
+    group.dataset.sectionId = section.id;
+
+    [base, pulse].forEach((line) => {
+      line.setAttribute("x1", `${center.x + unit.x * startOffset}`);
+      line.setAttribute("y1", `${center.y + unit.y * startOffset}`);
+      line.setAttribute("x2", `${center.x + endPoint.x - unit.x * endOffset}`);
+      line.setAttribute("y2", `${center.y + endPoint.y - unit.y * endOffset}`);
+    });
+
+    base.classList.add("connector-base");
+    pulse.classList.add("connector-pulse");
+    group.append(base, pulse);
+    fragment.append(group);
+  });
+
+  connectorLayer.replaceChildren(fragment);
+  syncConnectorState();
+}
+
+function syncConnectorState() {
+  if (!connectorLayer) {
+    return;
+  }
+
+  connectorLayer.querySelectorAll(".connector").forEach((connector) => {
+    const isHovered = hoveredSectionId === connector.dataset.sectionId;
+    const isActive = activeSectionId === connector.dataset.sectionId;
+    connector.classList.toggle("is-active", isHovered || (!hoveredSectionId && isActive));
+    connector.classList.toggle("is-dimmed", Boolean(hoveredSectionId) && !isHovered);
+  });
 }
 
 function renderMainNodes() {
@@ -608,6 +719,21 @@ function activateSection(id) {
     node.classList.toggle("is-selected", node.dataset.nodeId === id);
   });
 
+  syncMap();
+}
+
+function clearActiveBranch() {
+  if (!activeSectionId && !hoveredSectionId) {
+    return;
+  }
+
+  activeSectionId = null;
+  setHoveredSection(null);
+  document.querySelectorAll(".mainhex").forEach((node) => {
+    node.classList.remove("is-selected");
+    resetTileTilt(node);
+  });
+  renderSubNodes(null);
   syncMap();
 }
 
@@ -717,6 +843,8 @@ function syncMap() {
       setPoint(node, pointForChild(activeSection.slot, index));
     }
   });
+
+  syncConnectors();
 }
 
 renderMainNodes();
@@ -724,6 +852,7 @@ syncMap();
 igniteElement(logoTile.querySelector(".hex-content"), "logo");
 
 logo.addEventListener("error", handleLogoFallback);
+logoTile.addEventListener("mouseenter", clearActiveBranch);
 closeButton.addEventListener("click", closeOverlay);
 overlay.addEventListener("click", (event) => {
   if (event.target === overlay) {

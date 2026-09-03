@@ -16,8 +16,14 @@ const mainSections = [
           fill: true,
         },
       },
-      { id: "traits", title: "Traits", icon: "spark", action: "panel" },
-      { id: "about-philosophy", title: "Philosophy", icon: "mind", action: "panel" },
+      { id: "traits", title: "Traits", icon: "spark", action: "panel", contentPath: "content/about/traits.md" },
+      {
+        id: "about-philosophy",
+        title: "Philosophy",
+        icon: "mind",
+        action: "panel",
+        contentPath: "content/about/philosophy.md",
+      },
     ],
   },
   {
@@ -34,6 +40,7 @@ const mainSections = [
         action: "panel",
         url: "https://sites.google.com/view/riftbound",
         linkLabel: "Open Riftbound",
+        contentPath: "content/projects/game.md",
       },
       {
         id: "ai-pipeline",
@@ -42,6 +49,7 @@ const mainSections = [
         action: "panel",
         url: "https://github.com/Socratex/SocratexAI",
         linkLabel: "Open SocratexAI",
+        contentPath: "content/projects/ai-pipeline.md",
       },
     ],
   },
@@ -51,10 +59,16 @@ const mainSections = [
     slot: "lower-left",
     icon: "terminal",
     children: [
-      { id: "stack", title: "Stack", icon: "terminal", action: "panel" },
-      { id: "work-philosophy", title: "Philosophy", icon: "mind", action: "panel" },
-      { id: "history", title: "History", icon: "history", action: "panel" },
-      { id: "skills", title: "Skills", icon: "skills", action: "panel" },
+      { id: "stack", title: "Stack", icon: "terminal", action: "panel", contentPath: "content/work/stack.md" },
+      {
+        id: "work-philosophy",
+        title: "Philosophy",
+        icon: "mind",
+        action: "panel",
+        contentPath: "content/work/philosophy.md",
+      },
+      { id: "history", title: "History", icon: "history", action: "panel", contentPath: "content/work/history.md" },
+      { id: "skills", title: "Skills", icon: "skills", action: "panel", contentPath: "content/work/skills.md" },
     ],
   },
   {
@@ -196,9 +210,6 @@ const iconTemplates = {
   `,
 };
 
-const loremIpsum =
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer tempor, neque vitae efficitur cursus, justo nibh gravida libero, vitae pretium mi sem id lorem. Donec non arcu at ipsum fermentum luctus. Suspendisse potenti. Curabitur sit amet magna non erat pulvinar dictum. Praesent sed nibh vel erat consequat gravida.";
-
 const nodeLayer = document.querySelector(".node-layer");
 const subnodeLayer = document.querySelector(".subnode-layer");
 const connectorLayer = document.querySelector(".connector-layer");
@@ -224,9 +235,12 @@ const SUBNODE_UNLOCK_FALLBACK_MS = 260;
 let activeSectionId = null;
 let hoveredSectionId = null;
 let hoveredSubNodeId = null;
+let contentLoadToken = 0;
 let subnodeRenderToken = 0;
 const ignitionRuns = new WeakMap();
 const subnodeUnlockTimers = new WeakMap();
+const markdownCache = new Map();
+const markdownParser = import("./vendor/marked.esm.js").catch(() => null);
 
 const backNode = {
   id: "back",
@@ -763,6 +777,83 @@ function igniteContentDetails() {
   });
 }
 
+function prepareMarkdownReveal() {
+  [...contentCopy.children].forEach((element) => {
+    element.classList.add("content-reveal");
+  });
+}
+
+function sanitizeRenderedMarkdown(html) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  template.content.querySelectorAll("script, iframe, object, embed").forEach((element) => element.remove());
+  template.content.querySelectorAll("*").forEach((element) => {
+    [...element.attributes].forEach((attribute) => {
+      const value = attribute.value.trim().toLowerCase();
+      if (attribute.name.startsWith("on") || value.startsWith("javascript:")) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  return template.innerHTML;
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const escaped = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return escaped[character];
+  });
+}
+
+async function renderMarkdown(markdown) {
+  const markedModule = await markdownParser;
+  const parseMarkdown = markedModule?.marked?.parse || markedModule?.parse;
+
+  if (!parseMarkdown) {
+    return markdown
+      .split(/\n{2,}/)
+      .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  }
+
+  return sanitizeRenderedMarkdown(parseMarkdown(markdown));
+}
+
+async function loadMarkdown(path) {
+  if (markdownCache.has(path)) {
+    return markdownCache.get(path);
+  }
+
+  const response = await fetch(path, { cache: "no-cache" });
+  if (!response.ok) {
+    throw new Error(`Cannot load ${path}`);
+  }
+
+  const markdown = await response.text();
+  markdownCache.set(path, markdown);
+  return markdown;
+}
+
+async function setMarkdownContent(markdown) {
+  contentCopy.innerHTML = await renderMarkdown(markdown);
+  contentCopy.querySelectorAll("a[href]").forEach((link) => {
+    if (!link.href.startsWith("mailto:")) {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }
+  });
+  prepareMarkdownReveal();
+}
+
 function reigniteVisibleTiles() {
   const hiddenMainLayer = mobileMapQuery.matches && Boolean(activeSectionId);
   const visibleTiles = [];
@@ -1071,7 +1162,7 @@ function handleLogoClick() {
   reigniteVisibleTiles();
 }
 
-function handleChildAction(child) {
+async function handleChildAction(child) {
   if (child.action === "back") {
     leaveMobileSubview();
     return;
@@ -1086,16 +1177,39 @@ function handleChildAction(child) {
     return;
   }
 
+  const token = (contentLoadToken += 1);
   contentTitle.textContent = child.title;
   setPanelMedia(child);
   contentCopy.hidden = Boolean(child.media);
-  contentCopy.textContent = child.media ? "" : loremIpsum;
+  contentCopy.replaceChildren();
   setPanelLink(child);
   contentPanel.classList.toggle("is-media-panel", Boolean(child.media));
   overlay.hidden = false;
   document.body.classList.add("has-overlay");
-  window.requestAnimationFrame(igniteContentDetails);
   closeButton.focus();
+
+  if (child.media) {
+    window.requestAnimationFrame(igniteContentDetails);
+    return;
+  }
+
+  try {
+    const markdown = await loadMarkdown(child.contentPath || `content/${child.id}.md`);
+    if (token !== contentLoadToken || overlay.hidden) {
+      return;
+    }
+
+    contentCopy.hidden = false;
+    await setMarkdownContent(markdown);
+  } catch (error) {
+    if (token !== contentLoadToken || overlay.hidden) {
+      return;
+    }
+
+    await setMarkdownContent("Content file could not be loaded.");
+  }
+
+  window.requestAnimationFrame(igniteContentDetails);
 }
 
 function openDirectLink(url) {
@@ -1149,6 +1263,7 @@ function leaveMobileSubview() {
 }
 
 function closeOverlay() {
+  contentLoadToken += 1;
   overlay.hidden = true;
   document.body.classList.remove("has-overlay");
   reigniteVisibleTiles();

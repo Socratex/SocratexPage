@@ -1,6 +1,5 @@
 <details name="traits">
-<summary>⚖️Pragmatic</summary>
-
+<summary>⚖️ Pragmatic</summary>
 
 I’d rather be accurately dissed than impressively praised.
 
@@ -11,8 +10,7 @@ I value introspection over bragging, and useful feedback over empty praise.<br>C
 </details>
 
 <details name="traits">
-<summary>🎯Direct</summary>
-
+<summary>🎯 Direct</summary>
 
 I tend to look for the actual point and go there.
 
@@ -25,7 +23,8 @@ I prefer wrapping difficult things in constructive feedback, not cotton wool.
 </details>
 
 <details name="traits">
-<summary>⚡Dopamine-driven</summary>
+<summary>⚡ Dopamine-driven</summary>
+
 
 I like momentum, novelty and fast feedback.<br>Ceremonies, unnecessary waiting and stretched information are my nemesis.
 
@@ -36,8 +35,7 @@ I tend to consume and communicate knowledge in compressed capsules:<br>separate 
 </details>
 
 <details name="traits">
-<summary>🔬Curious Engineer</summary>
-
+<summary>🔬 Curious Engineer</summary>
 
 “It works because it works” has never been a satisfying explanation for me.<br>I want to see the gears and understand underlying principles.
 
@@ -48,8 +46,7 @@ Finding shortcuts and model improvements is my background process.<br>I can talk
 </details>
 
 <details name="traits">
-<summary>🤖Tech-collecting Nerd</summary>
-
+<summary>🤖 Tech-collecting Nerd</summary>
 
 Being a programmer feels more like a personality leak than a job.
 
@@ -62,8 +59,7 @@ Apparently this counts as a hobby.
 </details>
 
 <details name="traits">
-<summary>🧩Autistic Introvert</summary>
-
+<summary>🧩 Autistic Introvert</summary>
 
 Text beats voice. Small groups beat crowds.
 
@@ -74,9 +70,7 @@ I like people - just not necessarily all of them at once.<br>I’m prefer asynch
 </details>
 
 <details name="traits">
-<summary>✨Enthusiastic</summary>
-
-
+<summary>✨ Enthusiastic</summary>
 My default setting is usually positive, curious and engaged.
 
 And when something genuinely catches my attention,<br>“engaged” escalates into slightly unreasonable levels of focus very quickly.

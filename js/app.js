@@ -778,9 +778,22 @@ function igniteContentDetails() {
 }
 
 function prepareMarkdownReveal() {
-  [...contentCopy.children].forEach((element) => {
-    element.classList.add("content-reveal");
+  contentCopy.querySelectorAll(".content-reveal").forEach((element) => {
+    element.classList.remove("content-reveal", "is-lit", "is-igniting");
+    clearIgnition(element);
   });
+
+  contentCopy
+    .querySelectorAll("h1, h2, h3, h4, h5, h6, p, li, summary, blockquote, pre, table, figure, img")
+    .forEach((element) => {
+      element.classList.add("content-reveal");
+    });
+
+  [...contentCopy.children]
+    .filter((element) => !element.matches("details, ul, ol") && !element.querySelector(".content-reveal"))
+    .forEach((element) => {
+      element.classList.add("content-reveal");
+    });
 }
 
 function sanitizeRenderedMarkdown(html) {

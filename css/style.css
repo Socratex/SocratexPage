@@ -715,10 +715,28 @@ button {
 }
 
 .content-copy p,
-.content-copy li {
+.content-copy li,
+.content-copy summary {
   color: var(--muted);
   font-size: clamp(1rem, 1.5vw, 1.28rem);
   line-height: 1.7;
+}
+
+.content-copy details {
+  margin: 0;
+}
+
+.content-copy details > * {
+  margin: 0;
+}
+
+.content-copy details > * + * {
+  margin-top: 0.85rem;
+}
+
+.content-copy summary {
+  color: var(--text);
+  cursor: pointer;
 }
 
 .content-copy ul,
@@ -739,12 +757,24 @@ button {
 
 .content-copy h1,
 .content-copy h2,
-.content-copy h3 {
+.content-copy h3,
+.content-copy h4,
+.content-copy h5,
+.content-copy h6 {
   margin-top: 1.4rem;
   color: var(--text);
   font-size: clamp(1.2rem, 2vw, 1.7rem);
   line-height: 1.15;
   text-transform: uppercase;
+}
+
+.content-copy img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(44, 232, 255, 0.26);
+  box-shadow: 0 0 22px rgba(44, 232, 255, 0.16);
 }
 
 .content-media {

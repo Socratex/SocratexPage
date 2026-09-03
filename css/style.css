@@ -648,16 +648,18 @@ button {
 }
 
 .content-overlay {
+  --overlay-padding: clamp(18px, 4vw, 44px);
   position: fixed;
   inset: 0;
   z-index: 20;
   display: grid;
   place-items: center;
-  padding: clamp(18px, 4vw, 44px);
+  padding: var(--overlay-padding);
   background:
     radial-gradient(circle at 50% 42%, rgba(44, 232, 255, 0.12), transparent 32rem),
     rgba(1, 5, 9, 0.82);
   backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .content-overlay[hidden] {
@@ -667,7 +669,8 @@ button {
 .content-panel {
   position: relative;
   width: min(1040px, 94vw);
-  min-height: min(620px, 82vh);
+  max-height: calc(100svh - var(--overlay-padding) - var(--overlay-padding));
+  min-height: min(620px, calc(100svh - var(--overlay-padding) - var(--overlay-padding)));
   padding: clamp(26px, 4vw, 56px);
   color: var(--text);
   background:
@@ -679,7 +682,12 @@ button {
     inset 0 1px 0 rgba(141, 239, 255, 0.14),
     inset 0 0 36px rgba(44, 232, 255, 0.06);
   border-radius: 18px;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: rgba(44, 232, 255, 0.56) rgba(2, 13, 22, 0.64);
+  scrollbar-width: thin;
 }
 
 .content-panel::before {
@@ -691,6 +699,21 @@ button {
   box-shadow:
     0 0 18px rgba(44, 232, 255, 0.38),
     inset 0 0 24px rgba(44, 232, 255, 0.15);
+}
+
+.content-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content-panel::-webkit-scrollbar-track {
+  background: rgba(2, 13, 22, 0.64);
+  border-radius: 999px;
+}
+
+.content-panel::-webkit-scrollbar-thumb {
+  background: rgba(44, 232, 255, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(44, 232, 255, 0.32);
 }
 
 .content-reveal {
@@ -1074,6 +1097,18 @@ button {
 @media (max-width: 640px) {
   body {
     overflow: auto;
+  }
+
+  .content-overlay {
+    --overlay-padding: 12px;
+    place-items: stretch;
+  }
+
+  .content-panel {
+    width: 100%;
+    max-height: calc(100svh - var(--overlay-padding) - var(--overlay-padding));
+    min-height: 0;
+    padding: 28px 20px 34px;
   }
 
   .map-stage {

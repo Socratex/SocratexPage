@@ -216,13 +216,13 @@ const contentImage = document.querySelector("#content-image");
 const contentCopy = document.querySelector("#content-copy");
 const closeButton = document.querySelector(".content-close");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
-const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const HEX_HEIGHT_RATIO = 0.875;
 const MIN_DESKTOP_TILE_HEIGHT = 72;
 const DESKTOP_EDGE_GAP_MULTIPLIER = 3;
 
 let activeSectionId = null;
 let hoveredSectionId = null;
+let hoveredSubNodeId = null;
 let subnodeRenderToken = 0;
 const ignitionRuns = new WeakMap();
 
@@ -390,6 +390,15 @@ function setHoveredSection(id) {
   syncConnectorState();
 }
 
+function setHoveredSubNode(id) {
+  hoveredSubNodeId = id;
+  mapStage.classList.toggle("is-sub-hovering", Boolean(id));
+
+  document.querySelectorAll(".subhex").forEach((node) => {
+    node.classList.toggle("is-hovered", node.dataset.nodeId === id);
+  });
+}
+
 function clearHoveredSection(id) {
   if (hoveredSectionId !== id) {
     return;
@@ -398,27 +407,20 @@ function clearHoveredSection(id) {
   setHoveredSection(null);
 }
 
+function clearHoveredSubNode(id) {
+  if (hoveredSubNodeId !== id) {
+    return;
+  }
+
+  setHoveredSubNode(null);
+}
+
 function resetTileTilt(tile) {
   tile.style.setProperty("--tilt-x", "0deg");
   tile.style.setProperty("--tilt-y", "0deg");
 }
 
-function handleTilePointerMove(event) {
-  if (reducedMotionQuery.matches) {
-    return;
-  }
-
-  const rect = event.currentTarget.getBoundingClientRect();
-  const x = (event.clientX - rect.left) / rect.width - 0.5;
-  const y = (event.clientY - rect.top) / rect.height - 0.5;
-  const maxTilt = 3.2;
-
-  event.currentTarget.style.setProperty("--tilt-x", `${(-y * maxTilt).toFixed(2)}deg`);
-  event.currentTarget.style.setProperty("--tilt-y", `${(x * maxTilt).toFixed(2)}deg`);
-}
-
 function wireTileTilt(tile) {
-  tile.addEventListener("pointermove", handleTilePointerMove);
   tile.addEventListener("pointerleave", () => resetTileTilt(tile));
   tile.addEventListener("blur", () => resetTileTilt(tile));
 }
@@ -474,6 +476,13 @@ const ignitionProfiles = {
     strongFlashChance: 0.22,
     dropoutChance: 0.12,
     settleFrames: [4, 7],
+  },
+  text: {
+    pulsesRange: [5, 8],
+    failedChance: 0.18,
+    strongFlashChance: 0.18,
+    dropoutChance: 0.08,
+    settleFrames: [2, 4],
   },
   logo: {
     pulsesRange: [9, 12],
@@ -678,6 +687,30 @@ function igniteSubNodes() {
   });
 }
 
+function igniteContentDetails() {
+  contentPanel.querySelectorAll(".content-reveal:not([hidden])").forEach((element, index) => {
+    igniteElement(element, "text", index * 2);
+  });
+}
+
+function reigniteVisibleTiles() {
+  const hiddenMainLayer = mobileMapQuery.matches && Boolean(activeSectionId);
+  const visibleTiles = [];
+
+  if (!hiddenMainLayer) {
+    visibleTiles.push(logoTile.querySelector(".hex-content"));
+    visibleTiles.push(...document.querySelectorAll(".mainhex"));
+  }
+
+  visibleTiles.push(...document.querySelectorAll(".subhex:not(.is-exiting)"));
+
+  visibleTiles.filter(Boolean).forEach((tile, index) => {
+    const profile = tile.closest?.(".logo-tile") ? "logo" : tile.classList.contains("subhex") ? "sub" : "main";
+
+    igniteElement(tile, profile, index * 2);
+  });
+}
+
 function createMainNode(section, index) {
   const button = document.createElement("button");
 
@@ -737,6 +770,10 @@ function createSubNode(section, child, index) {
   if (!isDirectLink && child.action !== "none") {
     button.addEventListener("click", () => handleChildAction(child));
   }
+  button.addEventListener("mouseenter", () => setHoveredSubNode(child.id));
+  button.addEventListener("mouseleave", () => clearHoveredSubNode(child.id));
+  button.addEventListener("focus", () => setHoveredSubNode(child.id));
+  button.addEventListener("blur", () => clearHoveredSubNode(child.id));
   wireTileTilt(button);
 
   return button;
@@ -818,18 +855,23 @@ function syncTileLights() {
 
       const centerX = rect.left - stageRect.left + rect.width / 2;
       const centerY = rect.top - stageRect.top + rect.height / 2;
-      const radius = Math.max(rect.width, rect.height) * (node === logoTile ? 1.35 : 1.05);
-      const intensity = node === logoTile ? 0.22 : 0.16;
+      const radius = Math.max(rect.width, rect.height) * (node === logoTile ? 1.45 : 1.12);
+      const intensity = node === logoTile ? 0.11 : 0.08;
 
-      return `radial-gradient(circle at ${centerX.toFixed(1)}px ${centerY.toFixed(1)}px, rgba(44, 232, 255, ${intensity}) 0, rgba(44, 232, 255, ${intensity * 0.42}) ${Math.round(radius * 0.46)}px, transparent ${Math.round(radius)}px)`;
+      return {
+        glow: `radial-gradient(circle at ${centerX.toFixed(1)}px ${centerY.toFixed(1)}px, rgba(44, 232, 255, ${intensity}) 0, rgba(44, 232, 255, ${intensity * 0.48}) ${Math.round(radius * 0.5)}px, transparent ${Math.round(radius)}px)`,
+        mask: `radial-gradient(circle at ${centerX.toFixed(1)}px ${centerY.toFixed(1)}px, black 0, black ${Math.round(radius * 0.72)}px, transparent ${Math.round(radius)}px)`,
+      };
     })
     .filter(Boolean);
 
-  tileLightField.style.backgroundImage = gradients.join(", ");
+  tileLightField.style.backgroundImage = gradients.map((gradient) => gradient.glow).join(", ");
+  tileLightField.style.maskImage = gradients.map((gradient) => gradient.mask).join(", ");
+  tileLightField.style.webkitMaskImage = gradients.map((gradient) => gradient.mask).join(", ");
 }
 
 function syncBackgroundVideo() {
-  if (!backgroundVideo || reducedMotionQuery.matches) {
+  if (!backgroundVideo) {
     return;
   }
 
@@ -849,9 +891,10 @@ function renderMainNodes() {
   window.requestAnimationFrame(igniteMainNodes);
 }
 
-function renderSubNodes(section) {
+function renderSubNodes(section, options = {}) {
   const oldNodes = [...subnodeLayer.querySelectorAll(".subhex")];
   const token = (subnodeRenderToken += 1);
+  const onComplete = options.onComplete;
 
   if (oldNodes.length > 0) {
     oldNodes.forEach((node) => {
@@ -861,19 +904,22 @@ function renderSubNodes(section) {
 
     window.setTimeout(() => {
       if (token === subnodeRenderToken) {
-        renderSubNodesNow(section);
+        renderSubNodesNow(section, onComplete);
       }
     }, 240);
     return;
   }
 
-  renderSubNodesNow(section);
+  renderSubNodesNow(section, onComplete);
 }
 
-function renderSubNodesNow(section) {
+function renderSubNodesNow(section, onComplete) {
   if (!section) {
     subnodeLayer.replaceChildren();
-    window.requestAnimationFrame(syncMap);
+    window.requestAnimationFrame(() => {
+      syncMap();
+      onComplete?.();
+    });
     return;
   }
 
@@ -885,9 +931,15 @@ function renderSubNodesNow(section) {
   });
 
   subnodeLayer.replaceChildren(fragment);
+  if (!mobileMapQuery.matches) {
+    const origin = pointForSlot(section.slot);
+    subnodeLayer.querySelectorAll(".subhex").forEach((node) => setPoint(node, origin));
+  }
+
   window.requestAnimationFrame(() => {
     syncMap();
     igniteSubNodes();
+    onComplete?.();
   });
 }
 
@@ -915,11 +967,12 @@ function clearActiveBranch() {
 
   activeSectionId = null;
   setHoveredSection(null);
+  setHoveredSubNode(null);
   document.querySelectorAll(".mainhex").forEach((node) => {
     node.classList.remove("is-selected");
     resetTileTilt(node);
   });
-  renderSubNodes(null);
+  renderSubNodes(null, { onComplete: reigniteVisibleTiles });
   syncMap();
 }
 
@@ -946,6 +999,7 @@ function handleChildAction(child) {
   contentPanel.classList.toggle("is-media-panel", Boolean(child.media));
   overlay.hidden = false;
   document.body.classList.add("has-overlay");
+  window.requestAnimationFrame(igniteContentDetails);
   closeButton.focus();
 }
 
@@ -990,17 +1044,19 @@ function leaveMobileSubview() {
   }
 
   activeSectionId = null;
+  setHoveredSubNode(null);
   mapStage.classList.remove("is-mobile-subview");
   document.querySelectorAll(".mainhex").forEach((node) => {
     node.classList.remove("is-selected");
   });
-  renderSubNodes(null);
+  renderSubNodes(null, { onComplete: reigniteVisibleTiles });
   syncMap();
 }
 
 function closeOverlay() {
   overlay.hidden = true;
   document.body.classList.remove("has-overlay");
+  reigniteVisibleTiles();
 }
 
 function syncInteractiveVisibility() {

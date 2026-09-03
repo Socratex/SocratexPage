@@ -21,8 +21,6 @@
         </video>
         <div class="background-shade" aria-hidden="true"></div>
         <div class="tile-light-field" aria-hidden="true"></div>
-        <div class="ambient-grid" aria-hidden="true"></div>
-        <svg class="connector-layer" aria-hidden="true"></svg>
 
         <div class="logo-tile" aria-label="Socratex">
           <span class="hex-content">
@@ -37,14 +35,14 @@
         <section class="content-overlay" aria-labelledby="content-title" aria-modal="true" role="dialog" hidden>
           <div class="content-panel">
             <button class="content-close" type="button" aria-label="Close content panel">x</button>
-            <h2 id="content-title">Section</h2>
-            <a id="content-link" class="content-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            <h2 id="content-title" class="content-reveal">Section</h2>
+            <a id="content-link" class="content-link content-reveal" href="#" target="_blank" rel="noopener noreferrer" hidden>
               Open link
             </a>
-            <figure id="content-media" class="content-media" hidden>
+            <figure id="content-media" class="content-media content-reveal" hidden>
               <img id="content-image" alt="">
             </figure>
-            <p id="content-copy"></p>
+            <p id="content-copy" class="content-reveal"></p>
           </div>
         </section>
       </section>

@@ -954,17 +954,7 @@ button {
   *::before,
   *::after {
     scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .logo-tile {
-    animation: none !important;
-  }
-
-  .logo-mark {
-    animation: none !important;
   }
 
   .hex,
@@ -980,6 +970,13 @@ button {
   .hex::after,
   .hex-content {
     transform: none !important;
+  }
+
+  .hex:hover .hex-icon,
+  .hex:focus-visible .hex-icon,
+  .hex.is-hovered .hex-icon,
+  .hex.is-selected .hex-icon {
+    animation: none !important;
   }
 
   .connector-pulse {

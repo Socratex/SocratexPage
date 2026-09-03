@@ -224,7 +224,7 @@ const DESKTOP_EDGE_GAP_MULTIPLIER = 3;
 let activeSectionId = null;
 let hoveredSectionId = null;
 let subnodeRenderToken = 0;
-const ignitionTimers = new WeakMap();
+const ignitionRuns = new WeakMap();
 
 const backNode = {
   id: "back",
@@ -462,34 +462,52 @@ function tileMarkup(item) {
 
 const ignitionProfiles = {
   main: {
-    total: 760,
-    settleRange: [130, 170],
-    onRange: [58, 110],
-    offRange: [54, 128],
-    microChance: 0.16,
+    pulsesRange: [9, 12],
+    failedChance: 0.26,
+    strongFlashChance: 0.24,
+    dropoutChance: 0.14,
+    settleFrames: [5, 8],
   },
   sub: {
-    total: 620,
-    settleRange: [110, 150],
-    onRange: [56, 96],
-    offRange: [52, 112],
-    microChance: 0.14,
+    pulsesRange: [8, 11],
+    failedChance: 0.22,
+    strongFlashChance: 0.22,
+    dropoutChance: 0.12,
+    settleFrames: [4, 7],
   },
   logo: {
-    total: 780,
-    settleRange: [150, 190],
-    onRange: [60, 112],
-    offRange: [56, 130],
-    microChance: 0.12,
+    pulsesRange: [9, 12],
+    failedChance: 0.2,
+    strongFlashChance: 0.28,
+    dropoutChance: 0.12,
+    settleFrames: [5, 8],
   },
 };
 
 const ignitionStates = {
-  off: { opacity: "0", filter: "brightness(0.12) saturate(0.55)" },
-  low: { opacity: "0.16", filter: "brightness(0.28) saturate(0.7)" },
-  weak: { opacity: "0.72", filter: "brightness(0.86) saturate(0.95)" },
-  on: { opacity: "1", filter: "brightness(1.22) saturate(1.1)" },
-  flash: { opacity: "1", filter: "brightness(1.62) saturate(1.28)" },
+  off: { opacity: "0", filter: "brightness(0.08) saturate(0.48)" },
+  low: { opacity: "0.16", filter: "brightness(0.24) saturate(0.66)" },
+  failed: {
+    opacity: "0.46",
+    filter: "brightness(0.58) saturate(0.84) drop-shadow(0 0 4px rgba(44, 232, 255, 0.18))",
+  },
+  weak: {
+    opacity: "0.72",
+    filter: "brightness(0.86) saturate(0.95) drop-shadow(0 0 7px rgba(44, 232, 255, 0.22))",
+  },
+  on: {
+    opacity: "1",
+    filter: "brightness(1.18) saturate(1.08) drop-shadow(0 0 10px rgba(44, 232, 255, 0.4))",
+  },
+  flash: {
+    opacity: "1",
+    filter: "brightness(1.62) saturate(1.28) drop-shadow(0 0 18px rgba(44, 232, 255, 0.64))",
+  },
+  flashStrong: {
+    opacity: "1",
+    filter:
+      "brightness(2.04) saturate(1.38) drop-shadow(0 0 24px rgba(141, 239, 255, 0.9)) drop-shadow(0 0 52px rgba(44, 232, 255, 0.48))",
+  },
   stable: { opacity: "1", filter: "brightness(1) saturate(1)" },
 };
 
@@ -501,38 +519,74 @@ function randomFrom(states) {
   return states[Math.floor(Math.random() * states.length)];
 }
 
+function nextFrame(control) {
+  return new Promise((resolve) => {
+    control.frameId = window.requestAnimationFrame(() => {
+      control.frameId = null;
+      resolve(!control.cancelled);
+    });
+  });
+}
+
+async function waitFrames(count, control) {
+  for (let frame = 0; frame < count; frame += 1) {
+    const shouldContinue = await nextFrame(control);
+    if (!shouldContinue) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function randomFramesForState(stateName, profile) {
+  if (stateName === "flashStrong") {
+    return randomBetween(1, 2);
+  }
+
+  if (stateName === "flash" || stateName === "on" || stateName === "weak") {
+    return randomBetween(1, 3);
+  }
+
+  if (stateName === "failed") {
+    return Math.random() < profile.dropoutChance ? 4 : randomBetween(1, 3);
+  }
+
+  if (stateName === "off" && Math.random() < profile.dropoutChance) {
+    return 4;
+  }
+
+  return randomBetween(1, 2);
+}
+
 function buildIgnitionSequence(profile) {
   const sequence = [];
-  const settleDuration = randomBetween(...profile.settleRange);
-  let remaining = profile.total - settleDuration;
-  let useOnState = false;
-  let microUsed = false;
+  const pulses = randomBetween(...profile.pulsesRange);
+  let nextIsBright = true;
 
-  while (remaining >= 108) {
-    const durationRange = useOnState ? profile.onRange : profile.offRange;
-    const duration = Math.min(randomBetween(...durationRange), remaining);
-    const state = useOnState ? randomFrom(["on", "flash", "weak"]) : randomFrom(["off", "low"]);
+  sequence.push({ frames: randomBetween(1, 2), state: "off" });
 
-    sequence.push({ duration, state });
-    remaining -= duration;
+  for (let index = 0; index < pulses; index += 1) {
+    let state;
 
-    if (!microUsed && remaining >= 132 && Math.random() < profile.microChance) {
-      sequence.push({
-        duration: randomBetween(22, 30),
-        state: useOnState ? "low" : "flash",
-      });
-      remaining -= sequence[sequence.length - 1].duration;
-      microUsed = true;
+    if (nextIsBright) {
+      state = Math.random() < profile.strongFlashChance ? "flashStrong" : randomFrom(["flash", "on", "weak"]);
+    } else if (Math.random() < profile.failedChance) {
+      state = "failed";
+    } else {
+      state = randomFrom(["off", "low"]);
     }
 
-    useOnState = !useOnState;
+    sequence.push({
+      frames: randomFramesForState(state, profile),
+      state,
+    });
+
+    nextIsBright = !nextIsBright;
   }
 
-  if (remaining > 0 && sequence.length > 0) {
-    sequence[sequence.length - 1].duration += remaining;
-  }
-
-  sequence.push({ duration: settleDuration, state: "stable" });
+  sequence.push({ frames: randomBetween(1, 2), state: "flashStrong" });
+  sequence.push({ frames: randomBetween(...profile.settleFrames), state: "stable" });
   return sequence;
 }
 
@@ -544,10 +598,13 @@ function applyIgnitionState(element, stateName) {
 }
 
 function clearIgnition(element) {
-  const timers = ignitionTimers.get(element) || [];
+  const run = ignitionRuns.get(element);
 
-  timers.forEach((timer) => window.clearTimeout(timer));
-  ignitionTimers.delete(element);
+  if (run) {
+    run.cancelled = true;
+  }
+
+  ignitionRuns.delete(element);
   element.classList.remove("is-igniting");
 }
 
@@ -558,45 +615,66 @@ function finishIgnition(element) {
   element.style.removeProperty("filter");
 }
 
-function igniteElement(element, profileName, delay = 0) {
+async function runIgnition(element, profileName, delayFrames, control) {
+  const profile = ignitionProfiles[profileName] || ignitionProfiles.main;
+  const sequence = buildIgnitionSequence(profile);
+
+  if (delayFrames > 0) {
+    const delayed = await waitFrames(delayFrames, control);
+    if (!delayed) {
+      return;
+    }
+  }
+
+  element.classList.add("is-igniting");
+  applyIgnitionState(element, "off");
+
+  for (const part of sequence) {
+    if (control.cancelled) {
+      return;
+    }
+
+    applyIgnitionState(element, part.state);
+    const shouldContinue = await waitFrames(part.frames, control);
+    if (!shouldContinue) {
+      return;
+    }
+  }
+
+  if (!control.cancelled) {
+    ignitionRuns.delete(element);
+    finishIgnition(element);
+  }
+}
+
+function igniteElement(element, profileName, delayFrames = 0) {
   if (!element) {
     return;
   }
 
   clearIgnition(element);
   element.classList.remove("is-lit");
-
-  if (reducedMotionQuery.matches) {
-    finishIgnition(element);
-    return;
-  }
-
-  const profile = ignitionProfiles[profileName] || ignitionProfiles.main;
-  const sequence = buildIgnitionSequence(profile);
-  const timers = [];
-  let elapsed = delay;
-
-  element.classList.add("is-igniting");
   applyIgnitionState(element, "off");
+  const control = { cancelled: false, frameId: null };
 
-  sequence.forEach((part) => {
-    timers.push(window.setTimeout(() => applyIgnitionState(element, part.state), elapsed));
-    elapsed += part.duration;
+  ignitionRuns.set(element, control);
+  runIgnition(element, profileName, delayFrames, control).catch(() => {
+    if (!control.cancelled) {
+      ignitionRuns.delete(element);
+      finishIgnition(element);
+    }
   });
-
-  timers.push(window.setTimeout(() => finishIgnition(element), delay + profile.total));
-  ignitionTimers.set(element, timers);
 }
 
 function igniteMainNodes() {
   document.querySelectorAll(".mainhex").forEach((node, index) => {
-    igniteElement(node, "main", 120 + index * 45);
+    igniteElement(node, "main", 7 + index * 3);
   });
 }
 
 function igniteSubNodes() {
   document.querySelectorAll(".subhex").forEach((node, index) => {
-    igniteElement(node, "sub", index * 34);
+    igniteElement(node, "sub", index * 2);
   });
 }
 

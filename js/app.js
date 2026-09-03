@@ -952,8 +952,13 @@ function createSubNode(section, child, index) {
     },
     true,
   );
-  if (!isDirectLink && child.action !== "none") {
-    button.addEventListener("click", () => handleChildAction(child));
+  if (child.action !== "none") {
+    button.addEventListener("click", (event) => {
+      if (isDirectLink) {
+        event.preventDefault();
+      }
+      handleChildAction(child);
+    });
   }
   button.addEventListener("mouseenter", () => setHoveredSubNode(child.id, section.id));
   button.addEventListener("mouseleave", () => clearHoveredSubNode(child.id));

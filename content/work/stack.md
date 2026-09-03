@@ -76,28 +76,27 @@
 <summary>🛠️ Tools</summary>
 
 
-- JetBrains IDEs mastery
+- JetBrains IDEs mastery (yeah, mastery)
 
-  - PHPStorm
+  - PhpStorm
   - IntelliJ IDEA
+- Git, Composer, Linux and all the usual shtick
 
 </details>
 
 <details name="stack">
 <summary>🧠 Engineering Practices</summary>
 
-- Refactoring
-- Code Review
-- ADRs
-- Scrum
-- EventStorming
+- Refactoring, Code Review
+- ADRs, EventStorming
 
 </details>
 
 <details name="stack">
-    <summary>🤖 AI Engineering</summary>
+<summary>🤖 AI Engineering</summary>
+
 - AI pipeline design
 - Multi-agent workflows
-- GPT, Codex, Claude, Jetbrains AI, Hermes
+- GPT, Codex, Claude, JetBrains AI, Hermes
 
 </details>

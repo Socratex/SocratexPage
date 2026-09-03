@@ -390,12 +390,16 @@ function setHoveredSection(id) {
   syncConnectorState();
 }
 
-function setHoveredSubNode(id) {
+function setHoveredSubNode(id, parentId = null) {
   hoveredSubNodeId = id;
   mapStage.classList.toggle("is-sub-hovering", Boolean(id));
 
   document.querySelectorAll(".subhex").forEach((node) => {
     node.classList.toggle("is-hovered", node.dataset.nodeId === id);
+  });
+
+  document.querySelectorAll(".mainhex").forEach((node) => {
+    node.classList.toggle("is-sub-parent", Boolean(parentId) && node.dataset.nodeId === parentId);
   });
 }
 
@@ -770,9 +774,9 @@ function createSubNode(section, child, index) {
   if (!isDirectLink && child.action !== "none") {
     button.addEventListener("click", () => handleChildAction(child));
   }
-  button.addEventListener("mouseenter", () => setHoveredSubNode(child.id));
+  button.addEventListener("mouseenter", () => setHoveredSubNode(child.id, section.id));
   button.addEventListener("mouseleave", () => clearHoveredSubNode(child.id));
-  button.addEventListener("focus", () => setHoveredSubNode(child.id));
+  button.addEventListener("focus", () => setHoveredSubNode(child.id, section.id));
   button.addEventListener("blur", () => clearHoveredSubNode(child.id));
   wireTileTilt(button);
 

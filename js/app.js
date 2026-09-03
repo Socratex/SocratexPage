@@ -1058,6 +1058,19 @@ function clearActiveBranch() {
   syncMap();
 }
 
+function handleLogoClick() {
+  if (!mobileMapQuery.matches) {
+    return;
+  }
+
+  if (activeSectionId) {
+    leaveMobileSubview();
+    return;
+  }
+
+  reigniteVisibleTiles();
+}
+
 function handleChildAction(child) {
   if (child.action === "back") {
     leaveMobileSubview();
@@ -1197,6 +1210,7 @@ igniteElement(logoTile.querySelector(".hex-content"), "logo");
 
 logo.addEventListener("error", handleLogoFallback);
 logoTile.addEventListener("mouseenter", clearActiveBranch);
+logoTile.addEventListener("click", handleLogoClick);
 closeButton.addEventListener("click", closeOverlay);
 overlay.addEventListener("click", (event) => {
   if (event.target === overlay) {

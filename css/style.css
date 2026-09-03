@@ -606,6 +606,11 @@ button {
   opacity: 0;
 }
 
+.subhex.is-positioning {
+  pointer-events: none;
+  cursor: default;
+}
+
 .hex.is-igniting,
 .logo-tile .hex-content.is-igniting {
   transition: transform 180ms ease !important;

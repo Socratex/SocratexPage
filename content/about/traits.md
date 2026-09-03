@@ -71,6 +71,7 @@ I like people - just not necessarily all of them at once.<br>I’m prefer asynch
 
 <details name="traits">
 <summary>✨ Enthusiastic</summary>
+
 My default setting is usually positive, curious and engaged.
 
 And when something genuinely catches my attention,<br>“engaged” escalates into slightly unreasonable levels of focus very quickly.

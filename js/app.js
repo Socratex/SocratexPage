@@ -226,6 +226,8 @@ const contentMedia = document.querySelector("#content-media");
 const contentImage = document.querySelector("#content-image");
 const contentCopy = document.querySelector("#content-copy");
 const closeButton = document.querySelector(".content-close");
+const toast = document.querySelector(".toast");
+const toastText = document.querySelector(".toast-text");
 const mobileMapQuery = window.matchMedia("(max-width: 640px)");
 const HEX_HEIGHT_RATIO = 0.875;
 const MIN_DESKTOP_TILE_HEIGHT = 72;
@@ -236,6 +238,8 @@ let activeSectionId = null;
 let hoveredSectionId = null;
 let hoveredSubNodeId = null;
 let contentLoadToken = 0;
+let toastHideTimer = null;
+let toastRunToken = 0;
 let subnodeRenderToken = 0;
 const ignitionRuns = new WeakMap();
 const subnodeUnlockTimers = new WeakMap();
@@ -933,13 +937,14 @@ function createSubNode(section, child, index) {
   button.dataset.parentId = section.id;
   button.dataset.action = child.action;
   setSubNodeInteractiveState(button, false);
+  const actionLabel = isDirectLink && /^mailto:/i.test(child.url) ? `Copy ${child.title}` : `Open ${child.title}`;
   button.setAttribute(
     "aria-label",
     child.action === "back"
       ? "Back to main portfolio map"
       : child.action === "none"
         ? child.title
-        : `Open ${child.title}`,
+        : actionLabel,
   );
   button.innerHTML = tileMarkup(child);
   button.addEventListener(
@@ -1230,9 +1235,99 @@ async function handleChildAction(child) {
   window.requestAnimationFrame(igniteContentDetails);
 }
 
+function getMailAddress(url) {
+  return decodeURIComponent(url.replace(/^mailto:/i, "").split("?")[0]);
+}
+
+function copyTextWithLegacyFallback(value) {
+  const field = document.createElement("textarea");
+  field.value = value;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.left = "-9999px";
+  field.style.top = "0";
+  document.body.append(field);
+  field.select();
+
+  try {
+    if (!document.execCommand("copy")) {
+      throw new Error("Copy command was rejected.");
+    }
+  } finally {
+    field.remove();
+  }
+}
+
+async function copyTextWithFallback(value) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch (error) {
+      copyTextWithLegacyFallback(value);
+      return;
+    }
+  }
+
+  copyTextWithLegacyFallback(value);
+}
+
+function showToast(message) {
+  if (!toast || !toastText) {
+    return;
+  }
+
+  const token = (toastRunToken += 1);
+
+  if (toastHideTimer) {
+    window.clearTimeout(toastHideTimer);
+  }
+
+  clearIgnition(toast);
+  toastText.textContent = message;
+  toast.hidden = false;
+  toast.classList.remove("is-visible", "is-hiding", "is-lit");
+  toast.classList.add("content-reveal", "is-visible");
+  window.requestAnimationFrame(() => igniteElement(toast, "text"));
+
+  toastHideTimer = window.setTimeout(() => {
+    if (token !== toastRunToken) {
+      return;
+    }
+
+    toast.classList.remove("is-visible");
+    toast.classList.add("is-hiding");
+    toast.addEventListener(
+      "animationend",
+      () => {
+        if (token !== toastRunToken) {
+          return;
+        }
+
+        toast.hidden = true;
+        toast.classList.remove("content-reveal", "is-hiding", "is-lit", "is-igniting");
+        toast.style.removeProperty("opacity");
+        toast.style.removeProperty("filter");
+      },
+      { once: true },
+    );
+  }, 2000);
+}
+
+async function copyMailAddress(url) {
+  const address = getMailAddress(url);
+
+  try {
+    await copyTextWithFallback(address);
+    showToast("Mail copied");
+  } catch (error) {
+    showToast("Copy failed");
+  }
+}
+
 function openDirectLink(url) {
-  if (url.startsWith("mailto:")) {
-    window.location.href = url;
+  if (/^mailto:/i.test(url)) {
+    copyMailAddress(url);
     return;
   }
 

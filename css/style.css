@@ -690,17 +690,6 @@ button {
   scrollbar-width: thin;
 }
 
-.content-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow:
-    0 0 18px rgba(44, 232, 255, 0.38),
-    inset 0 0 24px rgba(44, 232, 255, 0.15);
-}
-
 .content-panel::-webkit-scrollbar {
   width: 8px;
 }

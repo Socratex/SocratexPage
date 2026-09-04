@@ -6,7 +6,7 @@ I like refactoring legacy systems. Tidying them up is satisfying for me.
 Refactoring isn't only about making code prettier.<br>
 It's about reducing cognitive load and exposing concepts.<br>It's about making understanding codebase easy and changes cheaper.
 
-I have on my account rewrites and big refactors of several big projects.<br>Each of them successful and still in production.
+I have on my account rewrites and big refactors of several big projects.<br>Several of those refactors are still in production today.
 
 The key is matching the approach to the limits of the situation<br>and identifying biggest pains and leverages.
 
@@ -140,7 +140,7 @@ I keep it in the loop from the moment a problem appears:<br>clarifying and verif
 I use multi-agent framework to automate parts of it,<br>
 but you know well enough that without human in the loop,<br>AI will produce unsustainable hallucination almost every time.
 
-Anyone can do "hey, AI do that for me". I suggest providing friction and precise cooperation instead.<br>We're the insightful complainers, guarding quality and providing direction. We always were.
+Simple delegation is easy. But I suggest providing friction and precise cooperation instead.<br>We're the insightful complainers, guarding quality and providing direction. We always were.
 
 I mean - the point of AI isn't outsourcing thinking.<br>It's having another reasoning process constantly available to bounce ideas against.<br>AI expands the search space. I keep responsibility for context, decisions and verification.
 

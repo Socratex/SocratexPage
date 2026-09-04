@@ -93,7 +93,7 @@
 <details name="stack">
 <summary>🛠️ Tools</summary>
 
-- JetBrains IDEs mastery (yeah, mastery)
+- JetBrains IDEs expertise
 
   - PhpStorm
   - IntelliJ IDEA

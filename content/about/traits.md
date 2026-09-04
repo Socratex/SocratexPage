@@ -63,7 +63,7 @@ Apparently this counts as a hobby.
 
 Text beats voice. Small groups beat crowds.
 
-I like people - just not necessarily all of them at once.<br>I’m prefer asynchronous communication that gives me space to think.<br>
+I like people - just not necessarily all of them at once.<br>I prefer asynchronous communication that gives me space to think.<br>
 
 <br>
 

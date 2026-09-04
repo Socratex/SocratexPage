@@ -91,7 +91,7 @@ It's how I learn, how I write notes and how I communicate.
 <details name="skills">
 <summary>🛠️ Workflow & Developer Experience Optimization</summary>
 
-Repetitive friction bothers me enough that I remove it automatically.<br>I never succumb to the boiling frog syndrome.<br>I don't adapt to project pains. I remove them.
+Repetitive friction bothers me enough that I remove it automatically.<br>I tend not to succumb to the boiling frog syndrome.<br>I don't adapt to project pains. I remove them.
 
 IDE automation, tooling, scripts, better defaults<br>reusable mechanisms and small workflow improvements compound quickly.
 

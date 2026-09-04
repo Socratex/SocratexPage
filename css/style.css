@@ -682,12 +682,9 @@ button {
     inset 0 1px 0 rgba(141, 239, 255, 0.14),
     inset 0 0 36px rgba(44, 232, 255, 0.06);
   border-radius: 18px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-color: rgba(44, 232, 255, 0.56) rgba(2, 13, 22, 0.64);
-  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .content-panel::-webkit-scrollbar {
@@ -779,7 +776,15 @@ button {
 }
 
 .content-copy {
-  max-width: 74ch;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: rgba(44, 232, 255, 0.56) rgba(2, 13, 22, 0.64);
+  scrollbar-width: thin;
+  padding-right: 10px;
 }
 
 .content-copy > * {

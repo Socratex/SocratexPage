@@ -1,4 +1,4 @@
-**SocratexAI** is my multi-agent AI pipeline for software development.
+**SocratexAI** is my multipurpose multi-agent-compatible AI pipeline.
 
 The idea is to keep AI involved through the whole engineering loop,<br>
 not just use it as a glorified "implement this" button.

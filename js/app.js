@@ -805,17 +805,74 @@ function markdownDetails() {
   return [...contentCopy.querySelectorAll("details")];
 }
 
+function detailsGroupName(details) {
+  return details.dataset.detailsGroup || details.getAttribute("name") || "";
+}
+
+function setDetailsNameState(details, isActive) {
+  const groupName = detailsGroupName(details);
+
+  if (!groupName) {
+    return;
+  }
+
+  details.dataset.detailsGroup = groupName;
+
+  if (isActive) {
+    details.setAttribute("name", groupName);
+  } else {
+    details.removeAttribute("name");
+  }
+}
+
+function markdownDetailsGroups() {
+  const groups = new Map();
+
+  markdownDetails().forEach((details) => {
+    const groupName = detailsGroupName(details);
+
+    if (!groupName) {
+      return;
+    }
+
+    if (!groups.has(groupName)) {
+      groups.set(groupName, []);
+    }
+
+    groups.get(groupName).push(details);
+  });
+
+  return groups;
+}
+
+function syncDetailsNameState() {
+  markdownDetailsGroups().forEach((items) => {
+    const openCount = items.filter((item) => item.open).length;
+    const shouldGroup = openCount <= 1;
+
+    items.forEach((item) => setDetailsNameState(item, shouldGroup));
+  });
+}
+
+function handleDetailsToggle() {
+  requestAnimationFrame(() => {
+    syncDetailsNameState();
+    updateDetailsToggle();
+  });
+}
+
 function normalizeMarkdownDetails() {
   markdownDetails().forEach((details) => {
     const groupName = details.getAttribute("name");
 
     if (groupName) {
       details.dataset.detailsGroup = groupName;
-      details.removeAttribute("name");
     }
 
-    details.addEventListener("toggle", updateDetailsToggle);
+    details.addEventListener("toggle", handleDetailsToggle);
   });
+
+  syncDetailsNameState();
 }
 
 function updateDetailsToggle() {
@@ -842,9 +899,15 @@ function toggleAllDetails() {
 
   const shouldOpen = details.some((item) => !item.open);
 
+  if (shouldOpen) {
+    details.forEach((item) => setDetailsNameState(item, false));
+  }
+
   details.forEach((item) => {
     item.open = shouldOpen;
   });
+
+  syncDetailsNameState();
   updateDetailsToggle();
 }
 

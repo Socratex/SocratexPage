@@ -221,6 +221,7 @@ const logo = document.querySelector(".logo-mark");
 const overlay = document.querySelector(".content-overlay");
 const contentPanel = document.querySelector(".content-panel");
 const contentTitle = document.querySelector("#content-title");
+const detailsToggle = document.querySelector("#details-toggle");
 const contentLink = document.querySelector("#content-link");
 const contentMedia = document.querySelector("#content-media");
 const contentImage = document.querySelector("#content-image");
@@ -800,6 +801,53 @@ function prepareMarkdownReveal() {
     });
 }
 
+function markdownDetails() {
+  return [...contentCopy.querySelectorAll("details")];
+}
+
+function normalizeMarkdownDetails() {
+  markdownDetails().forEach((details) => {
+    const groupName = details.getAttribute("name");
+
+    if (groupName) {
+      details.dataset.detailsGroup = groupName;
+      details.removeAttribute("name");
+    }
+
+    details.addEventListener("toggle", updateDetailsToggle);
+  });
+}
+
+function updateDetailsToggle() {
+  if (!detailsToggle) {
+    return;
+  }
+
+  const details = markdownDetails();
+  const hasDetails = details.length > 0 && !contentCopy.hidden;
+  const shouldExpand = details.some((item) => !item.open);
+
+  detailsToggle.hidden = !hasDetails;
+  detailsToggle.dataset.mode = shouldExpand ? "expand" : "collapse";
+  detailsToggle.setAttribute("aria-label", shouldExpand ? "Expand all details" : "Collapse all details");
+  detailsToggle.setAttribute("aria-pressed", String(hasDetails && !shouldExpand));
+}
+
+function toggleAllDetails() {
+  const details = markdownDetails();
+
+  if (details.length === 0) {
+    return;
+  }
+
+  const shouldOpen = details.some((item) => !item.open);
+
+  details.forEach((item) => {
+    item.open = shouldOpen;
+  });
+  updateDetailsToggle();
+}
+
 function sanitizeRenderedMarkdown(html) {
   const template = document.createElement("template");
   template.innerHTML = html;
@@ -862,6 +910,7 @@ async function loadMarkdown(path) {
 
 async function setMarkdownContent(markdown) {
   contentCopy.innerHTML = await renderMarkdown(markdown);
+  normalizeMarkdownDetails();
   contentCopy.querySelectorAll("a[href]").forEach((link) => {
     if (!link.href.startsWith("mailto:")) {
       link.target = "_blank";
@@ -869,6 +918,7 @@ async function setMarkdownContent(markdown) {
     }
   });
   prepareMarkdownReveal();
+  updateDetailsToggle();
 }
 
 function reigniteVisibleTiles() {
@@ -1205,6 +1255,7 @@ async function handleChildAction(child) {
   setPanelMedia(child);
   contentCopy.hidden = Boolean(child.media);
   contentCopy.replaceChildren();
+  updateDetailsToggle();
   setPanelLink(child);
   contentPanel.classList.toggle("is-media-panel", Boolean(child.media));
   overlay.hidden = false;
@@ -1440,6 +1491,7 @@ logo.addEventListener("error", handleLogoFallback);
 logoTile.addEventListener("mouseenter", clearActiveBranch);
 logoTile.addEventListener("click", handleLogoClick);
 closeButton.addEventListener("click", closeOverlay);
+detailsToggle?.addEventListener("click", toggleAllDetails);
 overlay.addEventListener("click", (event) => {
   if (event.target === overlay) {
     closeOverlay();

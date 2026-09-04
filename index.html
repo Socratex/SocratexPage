@@ -35,7 +35,15 @@
         <section class="content-overlay" aria-labelledby="content-title" aria-modal="true" role="dialog" hidden>
           <div class="content-panel">
             <button class="content-close" type="button" aria-label="Close content panel">x</button>
-            <h2 id="content-title" class="content-reveal">Section</h2>
+            <div class="content-heading">
+              <h2 id="content-title" class="content-reveal">Section</h2>
+              <button id="details-toggle" class="details-toggle content-reveal" type="button" aria-label="Expand all details" hidden>
+                <svg class="details-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 9l5-5 5 5"></path>
+                  <path d="M7 15l5 5 5-5"></path>
+                </svg>
+              </button>
+            </div>
             <a id="content-link" class="content-link content-reveal" href="#" target="_blank" rel="noopener noreferrer" hidden>
               Open link
             </a>
